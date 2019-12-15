@@ -1,7 +1,7 @@
 #include "libsignal-jni.h"
 
-int purplesignal_init(SignalJVM *signalvm) {
-    if (signalvm->vm != NULL && signalvm->env != NULL) {
+int purplesignal_init(SignalJVM *sjvm) {
+    if (sjvm->vm != NULL && sjvm->env != NULL) {
         printf("signal: jni pointers not null. JVM seems to be initialized.\n");
         return 1;
     } else {
@@ -12,35 +12,39 @@ int purplesignal_init(SignalJVM *signalvm) {
         vm_args.options = options;
         vm_args.nOptions = nOptions;
         vm_args.version  = JNI_VERSION_1_8;
-        jint res = JNI_CreateJavaVM(&signalvm->vm, (void **)&signalvm->env, &vm_args);
+        jint res = JNI_CreateJavaVM(&sjvm->vm, (void **)&sjvm->env, &vm_args);
         return res == JNI_OK;
     }
 }
 
-void purplesignal_deinit(SignalJVM *signalvm) {
-    if (signalvm && signalvm->vm && *signalvm->vm) {
-        (*signalvm->vm)->DestroyJavaVM(signalvm->vm);
+void purplesignal_deinit(SignalJVM *sjvm) {
+    if (sjvm && sjvm->vm && *sjvm->vm) {
+        (*sjvm->vm)->DestroyJavaVM(sjvm->vm);
     }
-    signalvm->vm = NULL;
-    signalvm->env = NULL;
+    sjvm->vm = NULL;
+    sjvm->env = NULL;
 }
 
-int purplesignal_login(SignalJVM signalvm) {
-    jclass cls = (*signalvm.env)->FindClass(signalvm.env, "de/hehoe/purple_signal/PurpleSignal");
+int purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, const char* username) {
+    jclass cls = (*sjvm.env)->FindClass(sjvm.env, "de/hehoe/purple_signal/PurpleSignal");
     if (cls == NULL) {
         printf("signal: Failed to find class.\n");
         return 0;
     }
-    jmethodID constructor = (*signalvm.env)->GetMethodID(signalvm.env, cls, "<init>", "(Ljava/lang/String;)V");
+    jmethodID constructor = (*sjvm.env)->GetMethodID(sjvm.env, cls, "<init>", "(Ljava/lang/String;)V");
 	if (constructor == NULL) {
 		printf("signal: Failed to find constructor.\n");
 		return 0;
 	}
+    jstring jusername = (*sjvm.env)->NewStringUTF(sjvm.env, username);
+    jobject object = (*sjvm.env)->NewObject(sjvm.env, cls, constructor, jusername);
     return 1;
 }
 
 int main(int argc, char **argv) {
-    SignalJVM signalvm = {0};
-    printf("purplesignal_init: %d\n", purplesignal_init(&signalvm));
-    printf("purplesignal_login: %d\n", purplesignal_login(signalvm));
+    const char* username = argv[1];
+    SignalJVM sjvm = {0};
+    printf("purplesignal_init: %d\n", purplesignal_init(&sjvm));
+    PurpleSignal ps;
+    printf("purplesignal_login: %d\n", purplesignal_login(sjvm, &ps, username));
 }

@@ -52,6 +52,7 @@
 typedef struct {
     PurpleAccount *account;
     PurpleConnection *pc;
+    PurpleSignal ps;
     GList *used_images; // for inline images
 } SignalAccount;
 
@@ -132,6 +133,7 @@ signal_login(PurpleAccount *account)
     sa->account = account;
     sa->pc = pc;
 
+    purplesignal_login(signaljvm, &sa->ps, purple_account_get_username(account));
 }
 
 static void
