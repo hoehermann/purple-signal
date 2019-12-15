@@ -34,6 +34,8 @@
 #perror Purple3 not supported.
 #endif
 
+#include "libsignal-jni.h"
+
 #define SIGNAL_PLUGIN_ID "prpl-hehoe-signal"
 #ifndef SIGNAL_PLUGIN_VERSION
 #error Must set SIGNAL_PLUGIN_VERSION in Makefile
@@ -52,6 +54,8 @@ typedef struct {
     PurpleConnection *pc;
     GList *used_images; // for inline images
 } SignalAccount;
+
+PurpleSignal purplesignal;
 
 static const char *
 signal_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
@@ -184,17 +188,23 @@ signal_actions(PurplePlugin *plugin, gpointer context)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-    return TRUE;
+    gboolean jvm_ok = purplesignal_init(&purplesignal);
+    if (jvm_ok) {
+        purple_debug_info(
+            "signal", "JVM seems to have been initalized!\n"
+        );
+    }
+    return jvm_ok;
 }
 
 static gboolean
 plugin_unload(PurplePlugin *plugin, GError **error)
 {
     purple_signals_disconnect_by_handle(plugin);
+    purplesignal_deinit(&purplesignal);
     return TRUE;
 }
 
-/* Purple2 Plugin Load Functions */
 static gboolean
 libpurple2_plugin_load(PurplePlugin *plugin)
 {

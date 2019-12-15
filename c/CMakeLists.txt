@@ -9,6 +9,8 @@ set(VERSION_PATCH "0")
 
 project(${PROJECT_NAME})
 
+find_package(JNI REQUIRED)
+
 find_package(PkgConfig REQUIRED)
 
 pkg_check_modules(GLIB REQUIRED  glib-2.0)
@@ -19,11 +21,14 @@ add_definitions(-Wall)
 include_directories(
     ${PURPLE_INCLUDE_DIRS}
     ${GLIB2_INCLUDE_DIRS}
+    ${JNI_INCLUDE_DIRS}
     )
 
 set(SRC_LIST
     purple_compat.h
     libsignal.c
+    libsignal-jni.h
+    libsignal-jni.c
     )
 
 add_library(${PROJECT_NAME} SHARED ${SRC_LIST})
@@ -31,6 +36,7 @@ add_library(${PROJECT_NAME} SHARED ${SRC_LIST})
 target_link_libraries(${PROJECT_NAME}
     ${PURPLE_LIBRARIES}
     ${GLIB2_LIBRARIES}
+    ${JNI_LIBRARIES}
     )
 
 link_directories(
