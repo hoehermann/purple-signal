@@ -55,7 +55,7 @@ typedef struct {
     GList *used_images; // for inline images
 } SignalAccount;
 
-PurpleSignal purplesignal;
+SignalJVM signaljvm; // only one Java VM over all connections
 
 static const char *
 signal_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
@@ -188,7 +188,7 @@ signal_actions(PurplePlugin *plugin, gpointer context)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-    gboolean jvm_ok = purplesignal_init(&purplesignal);
+    gboolean jvm_ok = purplesignal_init(&signaljvm);
     if (jvm_ok) {
         purple_debug_info(
             "signal", "JVM seems to have been initalized!\n"
@@ -201,7 +201,7 @@ static gboolean
 plugin_unload(PurplePlugin *plugin, GError **error)
 {
     purple_signals_disconnect_by_handle(plugin);
-    purplesignal_deinit(&purplesignal);
+    purplesignal_deinit(&signaljvm);
     return TRUE;
 }
 

@@ -31,7 +31,8 @@ set(SRC_LIST
     libsignal-jni.c
     )
 
-add_library(${PROJECT_NAME} SHARED ${SRC_LIST})
+#add_library(${PROJECT_NAME} SHARED ${SRC_LIST})
+add_executable(${PROJECT_NAME} ${SRC_LIST})
 
 target_link_libraries(${PROJECT_NAME}
     ${PURPLE_LIBRARIES}

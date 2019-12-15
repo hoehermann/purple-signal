@@ -3,7 +3,7 @@
 typedef struct {
     JavaVM *vm;
     JNIEnv *env;
-} PurpleSignal;
+} SignalJVM;
 
-int purplesignal_init(PurpleSignal *ps);
-void purplesignal_deinit(PurpleSignal *ps);
+int purplesignal_init(SignalJVM *ps);
+void purplesignal_deinit(SignalJVM *ps);
