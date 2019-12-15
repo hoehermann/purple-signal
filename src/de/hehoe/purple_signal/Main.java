@@ -1,12 +1,5 @@
 package de.hehoe.purple_signal;
 
-/*
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.core.config.Configurator;
-*/
-
 import java.security.Security;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
@@ -19,14 +12,16 @@ import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
 import org.asamk.signal.manager.Manager;
 import org.asamk.signal.util.SecurityProvider;
+import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
+import org.whispersystems.signalservice.internal.util.Base64;
 import org.asamk.signal.util.IOUtils;
 
 public class Main {
 
-	//private static final Logger logger = LogManager.getLogger("signald");
 
+	// stolen from signal-cli/src/main/java/org/asamk/signal/Main.java
 	/**
 	 * Uses $XDG_DATA_HOME/signal-cli if it exists, or if none of the legacy
 	 * directories exist: - $HOME/.config/signal - $HOME/.config/textsecure
@@ -48,17 +43,13 @@ public class Main {
 	 
 
 	public static void main(String[] args) {
-		// stolen from signald/src/main/java/io/finn/signald/Main.java and signal-cli/src/main/java/org/asamk/signal/Main.java
-
-		//Logger logger = LogManager.getLogger("purple-signal");
-		//Configurator.setLevel(System.getProperty("log4j.logger"), Level.DEBUG);
+		// stolen from signald/src/main/java/io/finn/signald/Main.java
 
 		// Workaround for BKS truststore
 		Security.insertProviderAt(new SecurityProvider(), 1);
 		Security.addProvider(new BouncyCastleProvider());
 
 		String data_path = getDefaultDataPath();
-		//logger.debug("Using data folder " + data_path);
 		System.out.println("Using data folder " + data_path);
 		Manager m = new Manager("+49[REDACTED]", data_path);
 		try {
@@ -72,16 +63,32 @@ public class Main {
 				m.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout, ignoreAttachments,
 						(envelope, content, exception) -> {
 							System.out.println("RECEIVED!");
-							// stolen from signald/src/main/java/io/finn/signald/MessageReceiver.java
+							// stolen from signald/src/main/java/io/finn/signald/MessageReceiver.java and signal-cli/src/main/java/org/asamk/signal/JsonMessageEnvelope.java
 					        if (exception != null) {
 					            // TODO: forward exception
 					        }
-							if (envelope != null) {
+							if (envelope != null && content != null) {
 								SignalServiceAddress source = envelope.getSourceAddress();
-								System.out.println(source.getNumber());
-								System.out.println(envelope);
-								System.out.println(content);
-								System.out.println(exception);
+						        String who = source.getNumber();
+						        long timestamp = envelope.getTimestamp();
+						        boolean isReceipt = envelope.isReceipt();
+						        if (!isReceipt) {
+						            if (content.getDataMessage().isPresent()) {
+						                SignalServiceDataMessage dataMessage = content.getDataMessage().get();
+						                timestamp = dataMessage.getTimestamp();
+						                if (dataMessage.getGroupInfo().isPresent()) {
+						                    SignalServiceGroup groupInfo = dataMessage.getGroupInfo().get();
+						                    who = Base64.encodeBytes(groupInfo.getGroupId()); // TODO: support groups properly
+						                }
+						                if (dataMessage.getBody().isPresent()) {
+						                    String message = dataMessage.getBody().get();
+											System.out.println(who);
+						                    System.out.println(timestamp);
+											System.out.println(message);
+						                }
+						            }
+					            }
+					            // TODO: support other message types
 							}
 						});
 			} catch (IOException | NotAGroupMemberException | GroupNotFoundException | AttachmentInvalidException e) {
