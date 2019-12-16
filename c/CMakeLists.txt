@@ -32,8 +32,8 @@ set(SRC_LIST
     de_hehoe_purple_signal_PurpleSignal.h
     )
 
-#add_library(${PROJECT_NAME} SHARED ${SRC_LIST})
-add_executable(${PROJECT_NAME} ${SRC_LIST})
+add_library(${PROJECT_NAME} SHARED ${SRC_LIST})
+#add_executable(${PROJECT_NAME} ${SRC_LIST})
 
 target_link_libraries(${PROJECT_NAME}
     ${PURPLE_LIBRARIES}

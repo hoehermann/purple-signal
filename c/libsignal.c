@@ -273,3 +273,27 @@ static PurplePluginInfo info = {
 };
 
 PURPLE_INIT_PLUGIN(gowhatsapp, plugin_init, info);
+
+/*
+ * Handler for a message. Called inside of the GTK eventloop.
+ *
+ * @return Whether to execute again. Always FALSE.
+ */
+gboolean
+signal_handle_message_mainthread(gpointer data)
+{
+    purple_debug_info(
+        "signal", "signal_handle_message_mainthread was called!\n"
+    );
+    return FALSE;
+}
+
+/*
+ * Handler for a message received by signal.
+ * Called by the JavaVM (outside of the GTK eventloop).
+ */
+void
+signal_handle_message_async()
+{
+    purple_timeout_add(0, signal_handle_message_mainthread, NULL); // yes, this is indeed neccessary – we checked
+}

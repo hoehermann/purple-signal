@@ -53,9 +53,16 @@ int purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, uintptr_t connection, c
     return 1;
 }
 
+void signal_handle_message_async();
 
-JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNatively(JNIEnv *env, jclass cls, jlong pc, jstring who, jstring message, jlong timestamp) {
+JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNatively(JNIEnv *env, jclass cls, jlong pc, jstring jwho, jstring jmessage, jlong timestamp) {
     printf("signal: DA NATIVE FUNCTION HAS BEEN CALLED!\n");
+    const char *who = (*env)->GetStringUTFChars(env, jwho, 0);
+    const char *message = (*env)->GetStringUTFChars(env, jmessage, 0);
+    signal_handle_message_async();
+    printf("signal: %lx %s %ld %s\n", pc, who, timestamp, message);
+    (*env)->ReleaseStringUTFChars(env, jmessage, message);
+    (*env)->ReleaseStringUTFChars(env, jwho, who);
 }
 
 int main(int argc, char **argv) {
