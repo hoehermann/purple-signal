@@ -40,7 +40,7 @@
 #ifndef SIGNAL_PLUGIN_VERSION
 #error Must set SIGNAL_PLUGIN_VERSION in Makefile
 #endif
-#define SIGNAL_PLUGIN_WEBSITE "https://github.com/hoehermann/TODO"
+#define SIGNAL_PLUGIN_WEBSITE "https://github.com/hoehermann/purple-signal"
 
 #define SIGNAL_STATUS_STR_ONLINE   "online"
 #define SIGNAL_STATUS_STR_OFFLINE  "offline"
