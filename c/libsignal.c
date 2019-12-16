@@ -133,7 +133,7 @@ signal_login(PurpleAccount *account)
     sa->account = account;
     sa->pc = pc;
 
-    purplesignal_login(signaljvm, &sa->ps, purple_account_get_username(account));
+    purplesignal_login(signaljvm, &sa->ps, (uintptr_t)pc, purple_account_get_username(account));
 }
 
 static void
@@ -203,7 +203,7 @@ static gboolean
 plugin_unload(PurplePlugin *plugin, GError **error)
 {
     purple_signals_disconnect_by_handle(plugin);
-    purplesignal_deinit(&signaljvm);
+    purplesignal_destroy(&signaljvm);
     return TRUE;
 }
 

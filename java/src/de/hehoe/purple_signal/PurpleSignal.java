@@ -50,8 +50,11 @@ public class PurpleSignal implements ReceiveMessageHandler {
 	}
 
 	private Manager manager;
+	private long connection;
 
-	public PurpleSignal(String username) {
+	public PurpleSignal(long connection, String username) {
+		this.connection = connection;
+		
 		// stolen from signald/src/main/java/io/finn/signald/Main.java
 
 		// Workaround for BKS truststore
@@ -67,10 +70,12 @@ public class PurpleSignal implements ReceiveMessageHandler {
 		} catch (Exception e) {
 			System.err.println("purple-signal: Error loading state file: " + e.getMessage());
 		}
-
 	}
 
 	public void receiveMessages() {
+		System.out.println("purple-signal: STARTING TO RECEIVE");
+		handleMessageNatively(0, "test", "TEST", 0);
+		/*
 		long timeout = 5;
 		boolean returnOnTimeout = true;
 		boolean ignoreAttachments = true;
@@ -80,11 +85,12 @@ public class PurpleSignal implements ReceiveMessageHandler {
 		} catch (IOException | NotAGroupMemberException | GroupNotFoundException | AttachmentInvalidException e) {
 			// TODO forward exception
 		}
+		*/
 		System.out.println("purple-signal: RECEIVING DONE");
 	}
 	
 	public static void main(String[] args) {
-		PurpleSignal ps = new PurpleSignal(args[0]);
+		PurpleSignal ps = new PurpleSignal(0, args[0]);
 		ps.receiveMessages();
 	}
 
@@ -115,6 +121,8 @@ public class PurpleSignal implements ReceiveMessageHandler {
 						System.out.println("purple-signal: " + who);
 						System.out.println("purple-signal: " + timestamp);
 						System.out.println("purple-signal: " + message);
+						System.out.println("purple-signal: CALLING NATIVE METHOD NOW");
+						handleMessageNatively(0, who, message, timestamp);
 					}
 				}
 			}
@@ -123,4 +131,8 @@ public class PurpleSignal implements ReceiveMessageHandler {
 
 	}
 
+	static {
+		System.loadLibrary("signal");
+	}
+	public static native void handleMessageNatively(long connection, String who, String content, long timestamp);
 }

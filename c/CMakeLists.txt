@@ -29,6 +29,7 @@ set(SRC_LIST
     libsignal.c
     libsignal-jni.h
     libsignal-jni.c
+    de_hehoe_purple_signal_PurpleSignal.h
     )
 
 #add_library(${PROJECT_NAME} SHARED ${SRC_LIST})

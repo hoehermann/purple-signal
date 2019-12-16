@@ -8,4 +8,8 @@ file(GLOB SIGNAL_CLI_JARS ${SIGNAL_CLI_LIB_DIR}/*.jar)
 set(CMAKE_JAVA_INCLUDE_PATH ${SIGNAL_CLI_JARS})
 message(STATUS "CMAKE_JAVA_INCLUDE_PATH ${CMAKE_JAVA_INCLUDE_PATH}")
 include(UseJava)
-add_jar(purple_signal src/de/hehoe/purple_signal/PurpleSignal.java ENTRY_POINT de/hehoe/purple_signal/PurpleSignal)
+add_jar(purple_signal 
+    src/de/hehoe/purple_signal/PurpleSignal.java 
+    ENTRY_POINT de/hehoe/purple_signal/PurpleSignal
+    GENERATE_NATIVE_HEADERS purple_signal_native
+)
