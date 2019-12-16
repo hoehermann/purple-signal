@@ -74,7 +74,7 @@ public class PurpleSignal implements ReceiveMessageHandler {
 
 	public void receiveMessages() {
 		System.out.println("purple-signal: STARTING TO RECEIVE");
-		handleMessageNatively(0, "test", "TEST", 0);
+		handleMessageNatively(this.connection, "+490000000", "TEST", 0);
 		/*
 		long timeout = 5;
 		boolean returnOnTimeout = true;

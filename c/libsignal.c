@@ -285,6 +285,8 @@ signal_handle_message_mainthread(gpointer data)
     purple_debug_info(
         "signal", "signal_handle_message_mainthread was called!\n"
     );
+    PurpleSignalMessage *psm = (PurpleSignalMessage *)data;
+    printf("signal: %lx %s %ld %s\n", psm->pc, psm->who, psm->timestamp, psm->message);
     return FALSE;
 }
 
@@ -293,7 +295,7 @@ signal_handle_message_mainthread(gpointer data)
  * Called by the JavaVM (outside of the GTK eventloop).
  */
 void
-signal_handle_message_async()
+signal_handle_message_async(PurpleSignalMessage *psm)
 {
-    purple_timeout_add(0, signal_handle_message_mainthread, NULL); // yes, this is indeed neccessary – we checked
+    purple_timeout_add(0, signal_handle_message_mainthread, (void*)psm); // yes, this is indeed neccessary – we checked
 }

@@ -7,7 +7,17 @@ typedef struct {
 } SignalJVM;
 
 typedef struct {
+    jobject instance; // reference to this connection's PurpleSignal (Java) instance.
 } PurpleSignal;
+
+typedef struct {
+    uintptr_t pc;
+    const char *who; 
+    const char *message; 
+    signed long timestamp;
+} PurpleSignalMessage;
+
+void signal_handle_message_async(PurpleSignalMessage *psm);
 
 int purplesignal_init(SignalJVM *ps);
 void purplesignal_destroy(SignalJVM *ps);

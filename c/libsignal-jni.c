@@ -1,5 +1,7 @@
 #include "libsignal-jni.h"
 #include "de_hehoe_purple_signal_PurpleSignal.h"
+#include <stdlib.h>
+#include <glib.h>
 
 int purplesignal_init(SignalJVM *sjvm) {
     if (sjvm->vm != NULL && sjvm->env != NULL) {
@@ -39,8 +41,8 @@ int purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, uintptr_t connection, c
         return 0;
     }
     jstring jusername = (*sjvm.env)->NewStringUTF(sjvm.env, username);
-    jobject object = (*sjvm.env)->NewObject(sjvm.env, cls, constructor, connection, jusername);
-    if (object == NULL) {
+    ps->instance = (*sjvm.env)->NewObject(sjvm.env, cls, constructor, connection, jusername);
+    if (ps->instance == NULL) {
         printf("signal: Failed to create an instance of PurpleSignal.\n");
         return 0;
     }
@@ -49,20 +51,22 @@ int purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, uintptr_t connection, c
         printf("signal: Failed to find method receiveMessages.\n");
         return 0;
     }
-    (*sjvm.env)->CallVoidMethod(sjvm.env, object, method);
+    (*sjvm.env)->CallVoidMethod(sjvm.env, ps->instance, method);
     return 1;
 }
-
-void signal_handle_message_async();
 
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNatively(JNIEnv *env, jclass cls, jlong pc, jstring jwho, jstring jmessage, jlong timestamp) {
     printf("signal: DA NATIVE FUNCTION HAS BEEN CALLED!\n");
     const char *who = (*env)->GetStringUTFChars(env, jwho, 0);
     const char *message = (*env)->GetStringUTFChars(env, jmessage, 0);
-    signal_handle_message_async();
-    printf("signal: %lx %s %ld %s\n", pc, who, timestamp, message);
+    PurpleSignalMessage *psm = malloc(sizeof(PurpleSignalMessage));
+    psm->pc = pc;
+    psm->who = g_strdup(who);
+    psm->message = g_strdup(message);
+    psm->timestamp = timestamp;
     (*env)->ReleaseStringUTFChars(env, jmessage, message);
     (*env)->ReleaseStringUTFChars(env, jwho, who);
+    signal_handle_message_async(psm);
 }
 
 int main(int argc, char **argv) {
