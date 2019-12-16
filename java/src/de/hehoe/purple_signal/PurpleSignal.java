@@ -74,9 +74,7 @@ public class PurpleSignal implements ReceiveMessageHandler {
 
 	public void receiveMessages() {
 		System.out.println("purple-signal: STARTING TO RECEIVE");
-		handleMessageNatively(this.connection, "+490000000", "TEST", 0);
-		/*
-		long timeout = 5;
+		long timeout = 5; // seconds
 		boolean returnOnTimeout = true;
 		boolean ignoreAttachments = true;
 		try {
@@ -85,7 +83,6 @@ public class PurpleSignal implements ReceiveMessageHandler {
 		} catch (IOException | NotAGroupMemberException | GroupNotFoundException | AttachmentInvalidException e) {
 			// TODO forward exception
 		}
-		*/
 		System.out.println("purple-signal: RECEIVING DONE");
 	}
 	
@@ -118,11 +115,9 @@ public class PurpleSignal implements ReceiveMessageHandler {
 					}
 					if (dataMessage.getBody().isPresent()) {
 						String message = dataMessage.getBody().get();
-						System.out.println("purple-signal: " + who);
-						System.out.println("purple-signal: " + timestamp);
-						System.out.println("purple-signal: " + message);
 						System.out.println("purple-signal: CALLING NATIVE METHOD NOW");
-						handleMessageNatively(0, who, message, timestamp);
+						handleMessageNatively(this.connection, who, message, timestamp);
+						// TODO: do not send receipt until handleMessageNatively returns successfully
 					}
 				}
 			}
@@ -132,7 +127,7 @@ public class PurpleSignal implements ReceiveMessageHandler {
 	}
 
 	static {
-		System.loadLibrary("signal");
+		System.loadLibrary("signal"); // TODO: change library name. this looks like it is asking for trouble already
 	}
 	public static native void handleMessageNatively(long connection, String who, String content, long timestamp);
 }
