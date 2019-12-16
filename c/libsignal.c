@@ -64,7 +64,7 @@ signal_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
     return "signal";
 }
 
-PurpleConversation *signal_find_conversation(char *username, PurpleAccount *account) {
+PurpleConversation *signal_find_conversation(const char *username, PurpleAccount *account) {
     PurpleIMConversation *imconv = purple_conversations_find_im_with_account(username, account);
     if (imconv == NULL) {
         imconv = purple_im_conversation_new(account, username);
@@ -78,40 +78,35 @@ PurpleConversation *signal_find_conversation(char *username, PurpleAccount *acco
 }
 
 void
-signal_display_message(PurpleConnection *pc)
+signal_display_message(PurpleConnection *pc, PurpleSignalMessage *psm)
 {
-    //SignalAccount *sa = purple_connection_get_protocol_data(pc);
+    SignalAccount *sa = purple_connection_get_protocol_data(pc);
     PurpleMessageFlags flags = 0;
-    char * content = NULL;
-    if (0 /*fromMe*/) {
+    int fromMe = 0;
+    if (fromMe) {
         // special handling of messages sent by self incoming from remote, addressing issue #32
         // copied from EionRobb/purple-discord/blob/master/libdiscord.c
         flags |= PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_REMOTE_SEND | PURPLE_MESSAGE_DELAYED;
-        //PurpleConversation *conv = signal_find_conversation(gwamsg->remoteJid, sa->account);
-        //purple_conversation_write(conv, gwamsg->remoteJid, content, flags, gwamsg->timestamp);
+        PurpleConversation *conv = signal_find_conversation(psm->who, sa->account);
+        purple_conversation_write(conv, psm->who, psm->message, flags, psm->timestamp);
     } else {
         flags |= PURPLE_MESSAGE_RECV;
-        //purple_serv_got_im(pc, gwamsg->remoteJid, content, flags, gwamsg->timestamp);
+        purple_serv_got_im(pc, psm->who, psm->message, flags, psm->timestamp);
     }
-    g_free(content);
 }
 
 /*
- * Interprets a message received from go-whatsapp. Handles login sucess and failures. Forwards errors.
+ * Interprets a message. Handles login success and failure. Forwards errors.
  */
 void
-signal_process_message(PurpleConnection *pc)
+signal_process_message(PurpleConnection *pc, PurpleSignalMessage *psm)
 {
     //SignalAccount *sa = purple_connection_get_protocol_data(pc);
     //PurpleAccount *account = purple_connection_get_account(pc);
-    
-    purple_debug_info(
-        "signal", "Recieved message.\n"
-    );
-    //if (!gwamsg->timestamp) {
-    //    gwamsg->timestamp = time(NULL);
-    //}
-    signal_display_message(pc);
+    if (!psm->timestamp) {
+        psm->timestamp = time(NULL);
+    }
+    signal_display_message(pc, psm);
 }
 
 void
@@ -286,7 +281,12 @@ signal_handle_message_mainthread(gpointer data)
         "signal", "signal_handle_message_mainthread was called!\n"
     );
     PurpleSignalMessage *psm = (PurpleSignalMessage *)data;
-    printf("signal: %lx %s %ld %s\n", psm->pc, psm->who, psm->timestamp, psm->message);
+    printf("signal: 0x%lx %s %ld %s\n", psm->pc, psm->who, psm->timestamp, psm->message);
+    PurpleConnection *pc = (PurpleConnection *)psm->pc;
+    signal_process_message(pc, psm);
+    g_free((char *)psm->who);
+    g_free((char *)psm->message);
+    free(psm);
     return FALSE;
 }
 
