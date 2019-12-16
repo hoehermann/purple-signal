@@ -7,6 +7,7 @@ typedef struct {
 } SignalJVM;
 
 typedef struct {
+    jclass class; // a reference to the PurpleSignal (Java) class.
     jobject instance; // reference to this connection's PurpleSignal (Java) instance.
 } PurpleSignal;
 
@@ -23,3 +24,4 @@ int purplesignal_init(SignalJVM *ps);
 void purplesignal_destroy(SignalJVM *ps);
 
 int purplesignal_login(SignalJVM signaljvm, PurpleSignal *ps, uintptr_t connection, const char* username);
+int purplesignal_close(SignalJVM sjvm, PurpleSignal *ps);

@@ -51,9 +51,11 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
     private Manager manager;
     private long connection;
+    private boolean keepReceiving;
 
     public PurpleSignal(long connection, String username) {
         this.connection = connection;
+        this.keepReceiving = false;
 
         // stolen from signald/src/main/java/io/finn/signald/Main.java
 
@@ -74,12 +76,15 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
     public void run() {
         System.out.println("purple-signal: STARTING TO RECEIVE");
-        long timeout = 1; // seconds. Affects delay on shutdown.
         boolean returnOnTimeout = true; // it looks like setting this to false means "listen for new messages forever".
-                                        // The Java VM will not even shut down.
+        // There seems to be a non-daemon thread to be involved somewhere as the Java VM
+        // will not ever shut down.
+        // TODO: Gain access to private MessagePipe, close it for immediate shutdown?
+        long timeout = 60; // Seconds to wait for an incoming message. After the timeout occurred, a re-connect happens silently.
+        // TODO: Find out how this affects what.
         boolean ignoreAttachments = true;
         try {
-            while (true) {
+            while (this.keepReceiving) {
                 this.manager.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout,
                     ignoreAttachments, this);
             }
@@ -90,10 +95,15 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
     }
 
     public void startReceiving() {
+        this.keepReceiving = true;
         Thread t = new Thread(this);
         t.setName("Receiver");
         t.setDaemon(true);
         t.start();
+    }
+
+    public void stopReceiving() {
+        this.keepReceiving = false;
     }
 
     public static void main(String[] args) {

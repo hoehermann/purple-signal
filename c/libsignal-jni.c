@@ -31,25 +31,39 @@ void purplesignal_destroy(SignalJVM *sjvm) {
 }
 
 int purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, uintptr_t connection, const char* username) {
-    jclass cls = (*sjvm.env)->FindClass(sjvm.env, "de/hehoe/purple_signal/PurpleSignal");
-    if (cls == NULL) {
+    ps->class = (*sjvm.env)->FindClass(sjvm.env, "de/hehoe/purple_signal/PurpleSignal");
+    if (ps->class == NULL) {
         printf("signal: Failed to find class.\n");
         return 0;
     }
-    jmethodID constructor = (*sjvm.env)->GetMethodID(sjvm.env, cls, "<init>", "(JLjava/lang/String;)V");
+    jmethodID constructor = (*sjvm.env)->GetMethodID(sjvm.env, ps->class, "<init>", "(JLjava/lang/String;)V");
     if (constructor == NULL) {
         printf("signal: Failed to find constructor.\n");
         return 0;
     }
     jstring jusername = (*sjvm.env)->NewStringUTF(sjvm.env, username);
-    ps->instance = (*sjvm.env)->NewObject(sjvm.env, cls, constructor, connection, jusername);
+    ps->instance = (*sjvm.env)->NewObject(sjvm.env, ps->class, constructor, connection, jusername);
     if (ps->instance == NULL) {
         printf("signal: Failed to create an instance of PurpleSignal.\n");
         return 0;
     }
-    jmethodID method = (*sjvm.env)->GetMethodID(sjvm.env, cls, "startReceiving", "()V");
-    if (constructor == NULL) {
+    jmethodID method = (*sjvm.env)->GetMethodID(sjvm.env, ps->class, "startReceiving", "()V");
+    if (method == NULL) {
         printf("signal: Failed to find method startReceiving.\n");
+        return 0;
+    }
+    (*sjvm.env)->CallVoidMethod(sjvm.env, ps->instance, method);
+    return 1;
+}
+
+int purplesignal_close(SignalJVM sjvm, PurpleSignal *ps) {
+    if (sjvm.vm == NULL || sjvm.env == NULL || ps->class == NULL || ps->instance == NULL) {
+        printf("signal: Pointer already NULL during purplesignal_close(). Assuming no connection ever done.\n");
+        return 1;
+    }
+    jmethodID method = (*sjvm.env)->GetMethodID(sjvm.env, ps->class, "stopReceiving", "()V");
+    if (method == NULL) {
+        printf("signal: Failed to find method stopReceiving.\n");
         return 0;
     }
     (*sjvm.env)->CallVoidMethod(sjvm.env, ps->instance, method);
