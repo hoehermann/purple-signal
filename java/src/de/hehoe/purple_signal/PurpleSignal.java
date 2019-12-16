@@ -21,7 +21,7 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.internal.util.Base64;
 import org.asamk.signal.util.IOUtils;
 
-public class PurpleSignal implements ReceiveMessageHandler {
+public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
 	// stolen from signal-cli/src/main/java/org/asamk/signal/Main.java
 	/**
@@ -63,32 +63,40 @@ public class PurpleSignal implements ReceiveMessageHandler {
 
 		String data_path = getDefaultDataPath();
 		System.out.println("Using data folder " + data_path);
-		manager = new Manager(username, data_path);
+		this.manager = new Manager(username, data_path);
 		try {
-			manager.init();
+			this.manager.init();
 			System.out.println("purple-signal: Logged in with " + manager.getUsername());
 		} catch (Exception e) {
 			System.err.println("purple-signal: Error loading state file: " + e.getMessage());
 		}
 	}
 
-	public void receiveMessages() {
+	public void run() {
 		System.out.println("purple-signal: STARTING TO RECEIVE");
-		long timeout = 5; // seconds
-		boolean returnOnTimeout = true;
+		long timeout = 1; // seconds. Affects delay on shutdown.
+		boolean returnOnTimeout = true; // it looks like setting this to false means "listen for new messages forever". The Java VM will not even shut down.
 		boolean ignoreAttachments = true;
 		try {
-			manager.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout, ignoreAttachments,
-					this);
+		    while (true) {
+			this.manager.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout, ignoreAttachments, this);
+		    }
 		} catch (IOException | NotAGroupMemberException | GroupNotFoundException | AttachmentInvalidException e) {
 			// TODO forward exception
 		}
 		System.out.println("purple-signal: RECEIVING DONE");
 	}
 	
+	public void startReceiving() {
+		Thread t = new Thread(this);
+		t.setName("Receiver");
+		t.setDaemon(true);
+		t.start();
+	}
+	
 	public static void main(String[] args) {
 		PurpleSignal ps = new PurpleSignal(0, args[0]);
-		ps.receiveMessages();
+		ps.startReceiving();
 	}
 
 	@Override
