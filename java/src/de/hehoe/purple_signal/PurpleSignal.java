@@ -64,18 +64,18 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
         Security.addProvider(new BouncyCastleProvider());
 
         String data_path = getDefaultDataPath();
-        System.out.println("Using data folder " + data_path);
+        logNatively(DEBUG_LEVEL_INFO, "Using data folder " + data_path);
         this.manager = new Manager(username, data_path);
         try {
             this.manager.init();
-            System.out.println("purple-signal: Logged in with " + manager.getUsername());
+            logNatively(DEBUG_LEVEL_INFO, "Logged in with " + manager.getUsername());
         } catch (Exception e) {
-            System.err.println("purple-signal: Error loading state file: " + e.getMessage());
+            handleErrorNatively(this.connection, "Error loading state file: " + e.getMessage());
         }
     }
 
     public void run() {
-        System.out.println("purple-signal: STARTING TO RECEIVE");
+        logNatively(DEBUG_LEVEL_INFO, "STARTING TO RECEIVE");
         boolean returnOnTimeout = true; // it looks like setting this to false means "listen for new messages forever".
         // There seems to be a non-daemon thread to be involved somewhere as the Java VM
         // will not ever shut down.
@@ -89,9 +89,9 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
                     ignoreAttachments, this);
             }
         } catch (IOException | NotAGroupMemberException | GroupNotFoundException | AttachmentInvalidException e) {
-            // TODO forward exception
+            handleErrorNatively(this.connection, "Exception while waiting for or receiving message: " + e.getMessage());
         }
-        System.out.println("purple-signal: RECEIVING DONE");
+        logNatively(DEBUG_LEVEL_INFO, "RECEIVING DONE");
     }
 
     public void startReceiving() {
@@ -107,24 +107,28 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
     }
 
     public static void main(String[] args) {
+        System.out.println("Creating instance…");
         PurpleSignal ps = new PurpleSignal(0, args[0]);
-        ps.startReceiving();
+        System.out.println("Starting to receive on main thread…");
+        ps.run();
     }
 
     @Override
     public void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, Throwable exception) {
-        System.out.println("purple-signal: RECEIVED SOMETHING!");
+        logNatively(DEBUG_LEVEL_INFO, "RECEIVED SOMETHING!");
         // stolen from signald/src/main/java/io/finn/signald/MessageReceiver.java and
         // signal-cli/src/main/java/org/asamk/signal/JsonMessageEnvelope.java
         if (exception != null) {
-            // TODO: forward exception
+            handleErrorNatively(this.connection, "Exception while handling message: " + exception.getMessage());
         }
         if (envelope != null && content != null) {
             SignalServiceAddress source = envelope.getSourceAddress();
             String who = source.getNumber();
             long timestamp = envelope.getTimestamp();
             boolean isReceipt = envelope.isReceipt();
-            if (!isReceipt) {
+            if (isReceipt) {
+                // TODO: display receipts as system-messages
+            } else {
                 if (content.getDataMessage().isPresent()) {
                     SignalServiceDataMessage dataMessage = content.getDataMessage().get();
                     timestamp = dataMessage.getTimestamp();
@@ -135,7 +139,6 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
                     }
                     if (dataMessage.getBody().isPresent()) {
                         String message = dataMessage.getBody().get();
-                        System.out.println("purple-signal: CALLING NATIVE METHOD NOW");
                         handleMessageNatively(this.connection, who, message, timestamp);
                         // TODO: do not send receipt until handleMessageNatively returns successfully
                     }
@@ -151,4 +154,8 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
     }
 
     public static native void handleMessageNatively(long connection, String who, String content, long timestamp);
+    public static native void handleErrorNatively(long connection, String error);
+    
+    final int DEBUG_LEVEL_INFO = 1; // from libpurple/debug.h
+    public static native void logNatively(int level, String text);
 }

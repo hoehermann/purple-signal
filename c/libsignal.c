@@ -103,6 +103,10 @@ signal_process_message(PurpleConnection *pc, PurpleSignalMessage *psm)
 {
     //SignalAccount *sa = purple_connection_get_protocol_data(pc);
     //PurpleAccount *account = purple_connection_get_account(pc);
+    if (psm->error) {
+        purple_debug(psm->error, "signal", "%s\n", psm->message);
+        purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, psm->message);
+    }
     if (!psm->timestamp) {
         psm->timestamp = time(NULL);
     }
@@ -128,7 +132,13 @@ signal_login(PurpleAccount *account)
     sa->account = account;
     sa->pc = pc;
 
-    purplesignal_login(signaljvm, &sa->ps, (uintptr_t)pc, purple_account_get_username(account));
+    purple_connection_set_state(pc, PURPLE_CONNECTION_CONNECTING);
+    const char *error = purplesignal_login(signaljvm, &sa->ps, (uintptr_t)pc, purple_account_get_username(account));
+    if (error) {
+        purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, error);
+    } else {
+        purple_connection_set_state(pc, PURPLE_CONNECTION_CONNECTED);
+    }
 }
 
 static void
@@ -189,7 +199,7 @@ plugin_load(PurplePlugin *plugin, GError **error)
     gboolean jvm_ok = purplesignal_init(&signaljvm);
     if (jvm_ok) {
         purple_debug_info(
-            "signal", "JVM seems to have been initalized!\n"
+            "signal", "JVM seems to have been initalized.\n"
         );
     }
     return jvm_ok;
@@ -282,12 +292,12 @@ signal_handle_message_mainthread(gpointer data)
         "signal", "signal_handle_message_mainthread was called!\n"
     );
     PurpleSignalMessage *psm = (PurpleSignalMessage *)data;
-    printf("signal: 0x%lx %s %ld %s\n", psm->pc, psm->who, psm->timestamp, psm->message);
+    purple_debug_info("signal", "0x%lx %s %ld %s %d\n", psm->pc, psm->who, psm->timestamp, psm->message, psm->error);
     PurpleConnection *pc = (PurpleConnection *)psm->pc;
     signal_process_message(pc, psm);
     g_free((char *)psm->who);
     g_free((char *)psm->message);
-    free(psm);
+    g_free(psm);
     return FALSE;
 }
 
@@ -299,4 +309,8 @@ void
 signal_handle_message_async(PurpleSignalMessage *psm)
 {
     purple_timeout_add(0, signal_handle_message_mainthread, (void*)psm); // yes, this is indeed neccessary – we checked
+}
+
+void signal_debug_async(int level, const char *message) {
+    purple_debug(level, "signal", "%s\n", message);
 }

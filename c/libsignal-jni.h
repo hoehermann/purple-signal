@@ -16,12 +16,14 @@ typedef struct {
     const char *who; 
     const char *message; 
     signed long timestamp;
+    int error;
 } PurpleSignalMessage;
 
 void signal_handle_message_async(PurpleSignalMessage *psm);
+void signal_debug_async(int level, const char *message);
 
 int purplesignal_init(SignalJVM *ps);
 void purplesignal_destroy(SignalJVM *ps);
 
-int purplesignal_login(SignalJVM signaljvm, PurpleSignal *ps, uintptr_t connection, const char* username);
+const char *purplesignal_login(SignalJVM signaljvm, PurpleSignal *ps, uintptr_t connection, const char* username);
 int purplesignal_close(SignalJVM sjvm, PurpleSignal *ps);

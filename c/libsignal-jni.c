@@ -2,10 +2,28 @@
 #include "de_hehoe_purple_signal_PurpleSignal.h"
 #include <stdlib.h>
 #include <glib.h>
+#include <assert.h>
+
+/**
+ * Debug levels.
+ * 
+ * from libpurple/debug.h
+ * I do not want this module to depend on purple directly, though.
+ */
+typedef enum
+{
+	PURPLE_DEBUG_ALL = 0,  /**< All debug levels.              */
+	PURPLE_DEBUG_MISC,     /**< General chatter.               */
+	PURPLE_DEBUG_INFO,     /**< General operation Information. */
+	PURPLE_DEBUG_WARNING,  /**< Warnings.                      */
+	PURPLE_DEBUG_ERROR,    /**< Errors.                        */
+	PURPLE_DEBUG_FATAL     /**< Fatal errors.                  */
+
+} PurpleDebugLevel;
 
 int purplesignal_init(SignalJVM *sjvm) {
     if (sjvm->vm != NULL && sjvm->env != NULL) {
-        printf("signal: jni pointers not null. JVM seems to be initialized.\n");
+        signal_debug_async(PURPLE_DEBUG_INFO, "jni pointers not null. JVM seems to be initialized already.\n");
         return 1;
     } else {
         JavaVMInitArgs vm_args;
@@ -30,51 +48,56 @@ void purplesignal_destroy(SignalJVM *sjvm) {
     sjvm->env = NULL;
 }
 
-int purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, uintptr_t connection, const char* username) {
+const char *purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, uintptr_t connection, const char* username) {
     ps->class = (*sjvm.env)->FindClass(sjvm.env, "de/hehoe/purple_signal/PurpleSignal");
     if (ps->class == NULL) {
-        printf("signal: Failed to find class.\n");
-        return 0;
+        return "Failed to find PurpleSignal class.";
     }
     jmethodID constructor = (*sjvm.env)->GetMethodID(sjvm.env, ps->class, "<init>", "(JLjava/lang/String;)V");
     if (constructor == NULL) {
-        printf("signal: Failed to find constructor.\n");
-        return 0;
+        return "Failed to find PurpleSignal constructor.";
     }
     jstring jusername = (*sjvm.env)->NewStringUTF(sjvm.env, username);
     ps->instance = (*sjvm.env)->NewObject(sjvm.env, ps->class, constructor, connection, jusername);
     if (ps->instance == NULL) {
-        printf("signal: Failed to create an instance of PurpleSignal.\n");
-        return 0;
+        return "Failed to create an instance of PurpleSignal.";
     }
     jmethodID method = (*sjvm.env)->GetMethodID(sjvm.env, ps->class, "startReceiving", "()V");
     if (method == NULL) {
-        printf("signal: Failed to find method startReceiving.\n");
-        return 0;
+        return "Failed to find method startReceiving.";
     }
     (*sjvm.env)->CallVoidMethod(sjvm.env, ps->instance, method);
-    return 1;
+    return NULL;
 }
 
 int purplesignal_close(SignalJVM sjvm, PurpleSignal *ps) {
     if (sjvm.vm == NULL || sjvm.env == NULL || ps->class == NULL || ps->instance == NULL) {
-        printf("signal: Pointer already NULL during purplesignal_close(). Assuming no connection ever done.\n");
+        signal_debug_async(PURPLE_DEBUG_INFO, "Pointer already NULL during purplesignal_close(). Assuming no connection ever made.\n");
         return 1;
     }
     jmethodID method = (*sjvm.env)->GetMethodID(sjvm.env, ps->class, "stopReceiving", "()V");
     if (method == NULL) {
-        printf("signal: Failed to find method stopReceiving.\n");
+        signal_debug_async(PURPLE_DEBUG_ERROR, "Failed to find method stopReceiving.\n");
         return 0;
     }
     (*sjvm.env)->CallVoidMethod(sjvm.env, ps->instance, method);
     return 1;
 }
 
+void purplesignal_error(uintptr_t pc, int level, const char *message) {
+    assert(level > 0);
+    PurpleSignalMessage *psm = g_malloc0(sizeof(PurpleSignalMessage));
+    psm->pc = pc;
+    psm->error = level;
+    psm->message = g_strdup(message);
+    signal_handle_message_async(psm);
+}
+
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNatively(JNIEnv *env, jclass cls, jlong pc, jstring jwho, jstring jmessage, jlong timestamp) {
-    printf("signal: DA NATIVE FUNCTION HAS BEEN CALLED!\n");
+    signal_debug_async(PURPLE_DEBUG_INFO, "DA NATIVE FUNCTION HAS BEEN CALLED!\n");
     const char *who = (*env)->GetStringUTFChars(env, jwho, 0);
     const char *message = (*env)->GetStringUTFChars(env, jmessage, 0);
-    PurpleSignalMessage *psm = malloc(sizeof(PurpleSignalMessage));
+    PurpleSignalMessage *psm = g_malloc0(sizeof(PurpleSignalMessage));
     psm->pc = pc;
     psm->who = g_strdup(who);
     psm->message = g_strdup(message);
@@ -84,10 +107,22 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNa
     signal_handle_message_async(psm);
 }
 
+JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleErrorNatively(JNIEnv *env, jclass cls, jlong pc, jstring jmessage) {
+    const char *message = (*env)->GetStringUTFChars(env, jmessage, 0);
+    purplesignal_error(pc, PURPLE_DEBUG_ERROR, message);
+    (*env)->ReleaseStringUTFChars(env, jmessage, message);
+}
+
+JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_logNatively(JNIEnv *env, jclass cls, jint level, jstring jmessage) {
+    const char *message = (*env)->GetStringUTFChars(env, jmessage, 0);
+    signal_debug_async(level, message);
+    (*env)->ReleaseStringUTFChars(env, jmessage, message);
+}
+
 int main(int argc, char **argv) {
     const char* username = argv[1];
     SignalJVM sjvm = {0};
     printf("purplesignal_init: %d\n", purplesignal_init(&sjvm));
     PurpleSignal ps;
-    printf("purplesignal_login: %d\n", purplesignal_login(sjvm, &ps, 0, username));
+    printf("purplesignal_login: %s\n", purplesignal_login(sjvm, &ps, 0, username));
 }

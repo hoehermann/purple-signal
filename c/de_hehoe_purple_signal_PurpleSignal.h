@@ -15,6 +15,22 @@ extern "C" {
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNatively
   (JNIEnv *, jclass, jlong, jstring, jstring, jlong);
 
+/*
+ * Class:     de_hehoe_purple_signal_PurpleSignal
+ * Method:    handleErrorNatively
+ * Signature: (JLjava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleErrorNatively
+  (JNIEnv *, jclass, jlong, jstring);
+
+/*
+ * Class:     de_hehoe_purple_signal_PurpleSignal
+ * Method:    logNatively
+ * Signature: (ILjava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_logNatively
+  (JNIEnv *, jclass, jint, jstring);
+
 #ifdef __cplusplus
 }
 #endif
