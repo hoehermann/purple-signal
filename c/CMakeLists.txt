@@ -1,11 +1,6 @@
-cmake_minimum_required (VERSION 2.8)
-
 # stolen from skype4pidgin/skypeweb/CMakeLists.txt
 
 set(PROJECT_NAME "signal" C)
-set(VERSION_MAJOR "0")
-set(VERSION_MINOR "0")
-set(VERSION_PATCH "0")
 
 project(${PROJECT_NAME})
 
@@ -29,7 +24,6 @@ set(SRC_LIST
     libsignal.c
     libsignal-jni.h
     libsignal-jni.c
-    de_hehoe_purple_signal_PurpleSignal.h
     )
 
 add_library(${PROJECT_NAME} SHARED ${SRC_LIST})
@@ -39,6 +33,7 @@ target_link_libraries(${PROJECT_NAME}
     ${PURPLE_LIBRARIES}
     ${GLIB2_LIBRARIES}
     ${JNI_LIBRARIES}
+    purple_signal_native # this is a target defined by the Java part. needs CMake 3.11
     )
 
 link_directories(
