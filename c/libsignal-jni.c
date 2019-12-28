@@ -58,6 +58,7 @@ const char *purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, uintptr_t conne
         return "Failed to find PurpleSignal constructor.";
     }
     jstring jusername = (*sjvm.env)->NewStringUTF(sjvm.env, username);
+    // TODO: find out if jstrings need to be destroyed after usage
     ps->instance = (*sjvm.env)->NewObject(sjvm.env, ps->class, constructor, connection, jusername);
     if (ps->instance == NULL) {
         return "Failed to create an instance of PurpleSignal.";
@@ -117,6 +118,23 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_logNatively(JNI
     const char *message = (*env)->GetStringUTFChars(env, jmessage, 0);
     signal_debug_async(level, message);
     (*env)->ReleaseStringUTFChars(env, jmessage, message);
+}
+
+int purplesignal_send(SignalJVM sjvm, PurpleSignal *ps, uintptr_t pc, const char *who, const char *message) {
+    if (sjvm.vm == NULL || sjvm.env == NULL || ps->class == NULL || ps->instance == NULL) {
+        purplesignal_error(pc, PURPLE_DEBUG_ERROR, "PurpleSignal has not been initialized.");
+        return 1;
+    }
+    jmethodID method = (*sjvm.env)->GetMethodID(sjvm.env, ps->class, "sendMessage", "(Ljava/lang/String;Ljava/lang/String;)V");
+    if (method == NULL) {
+        purplesignal_error(pc, PURPLE_DEBUG_ERROR, "Failed to find method sendMessage.\n");
+        return 0;
+    }
+    jstring jwho = (*sjvm.env)->NewStringUTF(sjvm.env, who);
+    jstring jmessage = (*sjvm.env)->NewStringUTF(sjvm.env, message);
+    (*sjvm.env)->CallVoidMethod(sjvm.env, ps->instance, method, jwho, jmessage);
+    // TODO: call with int as return type
+    return 1;
 }
 
 int main(int argc, char **argv) {

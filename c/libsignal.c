@@ -170,6 +170,8 @@ signal_status_types(PurpleAccount *account)
 static int
 signal_send_im(PurpleConnection *pc, const gchar *who, const gchar *message, PurpleMessageFlags flags)
 {
+    SignalAccount *sa = purple_connection_get_protocol_data(pc);
+    purplesignal_send(signaljvm, &sa->ps, (uintptr_t)pc, who, message);
     return 0;
 }
 
@@ -177,7 +179,6 @@ static void
 signal_add_buddy(PurpleConnection *pc, PurpleBuddy *buddy, PurpleGroup *group)
 {
     // does not actually do anything. buddy is added to pidgin's local list and is usable from there.
-    //SignalAccount *sa = purple_connection_get_protocol_data(pc);
 }
 
 static GList *
