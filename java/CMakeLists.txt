@@ -1,4 +1,4 @@
-find_package(Java 9 REQUIRED) # 9 and 11 were tested. version 8 might be sufficient.
+find_package(Java 8 REQUIRED) # 9 and 11 were tested. compiles with 8.
 find_package(Java COMPONENTS Development)
 find_package(JNI REQUIRED)
 
