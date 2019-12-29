@@ -1,6 +1,7 @@
 #include "libsignal-jni.h"
 #include "de_hehoe_purple_signal_PurpleSignal.h"
 #include <stdlib.h>
+#include <string.h>
 #include <glib.h>
 #include <assert.h>
 
@@ -21,22 +22,67 @@ typedef enum
 
 } PurpleDebugLevel;
 
-int purplesignal_init(SignalJVM *sjvm) {
+void purplesignal_error(uintptr_t pc, int level, const char *message) {
+    assert(level > 0);
+    PurpleSignalMessage *psm = g_malloc0(sizeof(PurpleSignalMessage));
+    psm->pc = pc;
+    psm->error = level;
+    psm->message = g_strdup(message);
+    signal_handle_message_async(psm);
+}
+
+char *readdir_of_jars(const char *path, const char *prefix) {
+    int signal_cli_jar_found = FALSE;
+    GString *out = g_string_new(prefix);
+    DIR *dp;
+    struct dirent *ep;     
+    dp = opendir (path);
+    if (dp == NULL) {
+        return g_strdup_printf("Could not open directory '%s'.", path);
+    } else {
+        while ((ep = readdir(dp)) != NULL) {
+            const char *extension = strrchr(ep->d_name, '.');
+            if (extension != NULL && strcmp(extension, ".jar") == 0) { // consider only .jar files
+                g_string_append_printf(out, ":%s/%s", path, ep->d_name);
+                if (strstr(ep->d_name, "signal-cli") != NULL) {
+                    signal_cli_jar_found = TRUE;
+                }
+            }
+        }
+        closedir(dp);
+    }
+    if (!signal_cli_jar_found) {
+        return g_strdup_printf("Directory '%s' contained no signal-cli*.jar.", path);
+    }
+    return g_string_free(out, FALSE);
+}
+
+const char *purplesignal_init(const char *signal_cli_path, SignalJVM *sjvm) {
     if (sjvm->vm != NULL && sjvm->env != NULL) {
         signal_debug_async(PURPLE_DEBUG_INFO, "jni pointers not null. JVM seems to be initialized already.\n");
-        return 1;
+        return NULL;
     } else {
+        char *classpath = readdir_of_jars(signal_cli_path, "-Djava.class.path=java/purple_signal.jar");
+        signal_debug_async(PURPLE_DEBUG_INFO, classpath);
+        if (classpath[0] != '-') {
+            return classpath;
+        }
         JavaVMInitArgs vm_args;
         const unsigned int nOptions = 2;
         JavaVMOption options[nOptions];
-        options[0].optionString = "-Djava.class.path=/opt/signal-cli/lib/argparse4j-0.8.1.jar:/opt/signal-cli/lib/bcprov-jdk15on-1.64.jar:/opt/signal-cli/lib/commons-codec-1.9.jar:/opt/signal-cli/lib/commons-logging-1.2.jar:/opt/signal-cli/lib/core-1.51.0.0.jar:/opt/signal-cli/lib/curve25519-java-0.5.0.jar:/opt/signal-cli/lib/dbus-java-2.7.0.jar:/opt/signal-cli/lib/debug-1.1.1.jar:/opt/signal-cli/lib/hexdump-0.2.1.jar:/opt/signal-cli/lib/httpclient-4.4.jar:/opt/signal-cli/lib/httpcore-4.4.jar:/opt/signal-cli/lib/jackson-annotations-2.9.0.jar:/opt/signal-cli/lib/jackson-core-2.9.9.jar:/opt/signal-cli/lib/jackson-databind-2.9.9.2.jar:/opt/signal-cli/lib/libphonenumber-8.10.7.jar:/opt/signal-cli/lib/okhttp-3.12.1.jar:/opt/signal-cli/lib/okio-1.15.0.jar:/opt/signal-cli/lib/pkix-1.51.0.0.jar:/opt/signal-cli/lib/protobuf-java-2.5.0.jar:/opt/signal-cli/lib/prov-1.51.0.0.jar:/opt/signal-cli/lib/signal-cli-0.6.5.jar:/opt/signal-cli/lib/signal-metadata-java-0.0.3.jar:/opt/signal-cli/lib/signal-protocol-java-2.7.1.jar:/opt/signal-cli/lib/signal-service-java-2.13.9_unofficial_1.jar:/opt/signal-cli/lib/threetenbp-1.3.6.jar:/opt/signal-cli/lib/unix-0.5.1.jar:java/purple_signal.jar"; // TODO: do not hard-code, obviously. maybe https://stackoverflow.com/questions/12489/how-do-you-get-a-directory-listing-in-c with GString and g_string_append_printf
+        options[0].optionString = classpath;
         // TODO: find own location, pass it on to -Djava.library.path=. maybe with https://stackoverflow.com/questions/43409167/find-location-of-loaded-shared-library-from-in-that-shared-library
         options[1].optionString = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=10044"; // TODO: conditionally enable this only in debug builds. Or if Pidgin was started in debug mode?
         vm_args.options = options;
         vm_args.nOptions = nOptions;
         vm_args.version  = JNI_VERSION_1_8;
         jint res = JNI_CreateJavaVM(&sjvm->vm, (void **)&sjvm->env, &vm_args);
-        return res == JNI_OK;
+        g_free(classpath);
+        if (res == JNI_OK) {
+            return NULL;
+        } else {
+            return "Unable to initialize Java VM."; // TODO: append res code
+        };
     }
 }
 
@@ -85,15 +131,6 @@ int purplesignal_close(SignalJVM sjvm, PurpleSignal *ps) {
     return 1;
 }
 
-void purplesignal_error(uintptr_t pc, int level, const char *message) {
-    assert(level > 0);
-    PurpleSignalMessage *psm = g_malloc0(sizeof(PurpleSignalMessage));
-    psm->pc = pc;
-    psm->error = level;
-    psm->message = g_strdup(message);
-    signal_handle_message_async(psm);
-}
-
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNatively(JNIEnv *env, jclass cls, jlong pc, jstring jwho, jstring jmessage, jlong timestamp) {
     signal_debug_async(PURPLE_DEBUG_INFO, "DA NATIVE FUNCTION HAS BEEN CALLED!\n");
     const char *who = (*env)->GetStringUTFChars(env, jwho, 0);
@@ -140,7 +177,7 @@ int purplesignal_send(SignalJVM sjvm, PurpleSignal *ps, uintptr_t pc, const char
 int main(int argc, char **argv) {
     const char* username = argv[1];
     SignalJVM sjvm = {0};
-    printf("purplesignal_init: %d\n", purplesignal_init(&sjvm));
+    printf("purplesignal_init: %s\n", purplesignal_init(".", &sjvm));
     PurpleSignal ps;
     printf("purplesignal_login: %s\n", purplesignal_login(sjvm, &ps, 0, username));
 }

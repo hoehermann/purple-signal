@@ -46,6 +46,9 @@
 #define SIGNAL_STATUS_STR_OFFLINE  "offline"
 #define SIGNAL_STATUS_STR_MOBILE   "mobile"
 
+#define SIGNAL_OPTION_LIBDIR "signal-cli-lib-dir"
+#define SIGNAL_DEFAULT_LIBDIR "/opt/signal-cli/lib"
+
 /*
  * Holds all information related to this account (connection) instance.
  */
@@ -118,6 +121,15 @@ signal_login(PurpleAccount *account)
 {
     PurpleConnection *pc = purple_account_get_connection(account);
 
+    const char *libdir = purple_account_get_string(account, SIGNAL_OPTION_LIBDIR, SIGNAL_DEFAULT_LIBDIR);
+    const char *errormsg = purplesignal_init(libdir, &signaljvm);
+    if (errormsg) {
+        purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, errormsg);
+        return;
+    } else {
+        purple_debug_info("signal", "JVM seems to have been initalized.\n");
+    }
+
     // this protocol does not support anything special right now
     PurpleConnectionFlags pc_flags;
     pc_flags = purple_connection_get_flags(pc);
@@ -184,6 +196,15 @@ signal_add_buddy(PurpleConnection *pc, PurpleBuddy *buddy, PurpleGroup *group)
 static GList *
 signal_add_account_options(GList *account_options)
 {
+    PurpleAccountOption *option;
+    
+    option = purple_account_option_string_new(
+                _("signal-cli's lib directory (containing .jar files)"),
+                SIGNAL_OPTION_LIBDIR,
+                SIGNAL_DEFAULT_LIBDIR
+                );
+    account_options = g_list_append(account_options, option);
+    
     return account_options;
 }
 
@@ -197,13 +218,7 @@ signal_actions(PurplePlugin *plugin, gpointer context)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-    gboolean jvm_ok = purplesignal_init(&signaljvm);
-    if (jvm_ok) {
-        purple_debug_info(
-            "signal", "JVM seems to have been initalized.\n"
-        );
-    }
-    return jvm_ok;
+    return TRUE;
 }
 
 static gboolean
@@ -293,7 +308,7 @@ signal_handle_message_mainthread(gpointer data)
         "signal", "signal_handle_message_mainthread was called!\n"
     );
     PurpleSignalMessage *psm = (PurpleSignalMessage *)data;
-    purple_debug_info("signal", "0x%lx %s %ld %s %d\n", psm->pc, psm->who, psm->timestamp, psm->message, psm->error);
+    purple_debug_info("signal", "%p %s %ld %s %d\n", (void *)psm->pc, psm->who, psm->timestamp, psm->message, psm->error);
     PurpleConnection *pc = (PurpleConnection *)psm->pc;
     signal_process_message(pc, psm);
     g_free((char *)psm->who);
