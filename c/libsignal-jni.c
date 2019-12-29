@@ -22,6 +22,18 @@ typedef enum
 
 } PurpleDebugLevel;
 
+#include <libgen.h>
+#define __USE_GNU
+#include <dlfcn.h>
+char *find_own_path() {
+    Dl_info info;
+    if (dladdr(find_own_path, &info)) {
+        return dirname(g_strdup(info.dli_fname));
+    } else {
+        return NULL;
+    }
+}
+
 void purplesignal_error(uintptr_t pc, int level, const char *message) {
     assert(level > 0);
     PurpleSignalMessage *psm = g_malloc0(sizeof(PurpleSignalMessage));
@@ -33,17 +45,18 @@ void purplesignal_error(uintptr_t pc, int level, const char *message) {
 
 char *readdir_of_jars(const char *path, const char *prefix) {
     int signal_cli_jar_found = FALSE;
-    GString *out = g_string_new(prefix);
+    char *out = NULL;
+    GString *classpath = g_string_new(prefix);
     DIR *dp;
     struct dirent *ep;     
     dp = opendir (path);
     if (dp == NULL) {
-        return g_strdup_printf("Could not open directory '%s'.", path);
+        out = g_strdup_printf("Could not open directory '%s'.", path);
     } else {
         while ((ep = readdir(dp)) != NULL) {
             const char *extension = strrchr(ep->d_name, '.');
             if (extension != NULL && strcmp(extension, ".jar") == 0) { // consider only .jar files
-                g_string_append_printf(out, ":%s/%s", path, ep->d_name);
+                g_string_append_printf(classpath, ":%s/%s", path, ep->d_name);
                 if (strstr(ep->d_name, "signal-cli") != NULL) {
                     signal_cli_jar_found = TRUE;
                 }
@@ -52,9 +65,14 @@ char *readdir_of_jars(const char *path, const char *prefix) {
         closedir(dp);
     }
     if (!signal_cli_jar_found) {
-        return g_strdup_printf("Directory '%s' contained no signal-cli*.jar.", path);
+        out = g_strdup_printf("Directory '%s' contained no signal-cli*.jar.", path);
     }
-    return g_string_free(out, FALSE);
+    if (out == NULL) {
+        return g_string_free(classpath, FALSE);
+    } else {
+        g_string_free(classpath, TRUE);
+        return out;
+    }
 }
 
 const char *purplesignal_init(const char *signal_cli_path, SignalJVM *sjvm) {
@@ -62,26 +80,36 @@ const char *purplesignal_init(const char *signal_cli_path, SignalJVM *sjvm) {
         signal_debug_async(PURPLE_DEBUG_INFO, "jni pointers not null. JVM seems to be initialized already.\n");
         return NULL;
     } else {
-        char *classpath = readdir_of_jars(signal_cli_path, "-Djava.class.path=java/purple_signal.jar");
+        char *ownpath = find_own_path();
+        // TODO: check for spaces
+        // TODO: check whether %s/purple_signal.jar is readable
+        char *prefix = g_strdup_printf("-Djava.class.path=%s/purple_signal.jar", ownpath);
+        char *classpath = readdir_of_jars(signal_cli_path, prefix);
+        g_free(prefix);
+        char *librarypath = g_strdup_printf("-Djava.library.path=%s", ownpath);
+        g_free(ownpath);
         signal_debug_async(PURPLE_DEBUG_INFO, classpath);
         if (classpath[0] != '-') {
+            g_free(librarypath);
             return classpath;
         }
+        
         JavaVMInitArgs vm_args;
-        const unsigned int nOptions = 2;
+        const unsigned int nOptions = 3;
         JavaVMOption options[nOptions];
         options[0].optionString = classpath;
-        // TODO: find own location, pass it on to -Djava.library.path=. maybe with https://stackoverflow.com/questions/43409167/find-location-of-loaded-shared-library-from-in-that-shared-library
-        options[1].optionString = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=10044"; // TODO: conditionally enable this only in debug builds. Or if Pidgin was started in debug mode?
+        options[1].optionString = librarypath;
+        options[2].optionString = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=10044"; // TODO: conditionally enable this only in debug builds. Or if Pidgin was started in debug mode?
         vm_args.options = options;
         vm_args.nOptions = nOptions;
         vm_args.version  = JNI_VERSION_1_8;
         jint res = JNI_CreateJavaVM(&sjvm->vm, (void **)&sjvm->env, &vm_args);
+        g_free(librarypath);
         g_free(classpath);
         if (res == JNI_OK) {
             return NULL;
         } else {
-            return "Unable to initialize Java VM."; // TODO: append res code
+            return g_strdup("Unable to initialize Java VM."); // TODO: append res code
         };
     }
 }

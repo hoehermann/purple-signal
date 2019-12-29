@@ -125,6 +125,7 @@ signal_login(PurpleAccount *account)
     const char *errormsg = purplesignal_init(libdir, &signaljvm);
     if (errormsg) {
         purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, errormsg);
+        g_free(errormsg);
         return;
     } else {
         purple_debug_info("signal", "JVM seems to have been initalized.\n");
