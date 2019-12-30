@@ -300,7 +300,7 @@ static PurplePluginInfo info = {
     NULL
 };
 
-PURPLE_INIT_PLUGIN(gowhatsapp, plugin_init, info);
+PURPLE_INIT_PLUGIN(signal, plugin_init, info);
 
 /*
  * Handler for a message. Called inside of the GTK eventloop.
