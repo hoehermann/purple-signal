@@ -191,7 +191,6 @@ int purplesignal_close(SignalJVM sjvm, PurpleSignal *ps) {
 }
 
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNatively(JNIEnv *env, jclass cls, jlong pc, jstring jwho, jstring jmessage, jlong timestamp) {
-    signal_debug_async(PURPLE_DEBUG_INFO, "DA NATIVE FUNCTION HAS BEEN CALLED!\n");
     const char *who = (*env)->GetStringUTFChars(env, jwho, 0);
     const char *message = (*env)->GetStringUTFChars(env, jmessage, 0);
     PurpleSignalMessage *psm = g_malloc0(sizeof(PurpleSignalMessage));
