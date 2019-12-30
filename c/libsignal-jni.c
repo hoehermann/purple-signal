@@ -7,7 +7,7 @@
 
 /**
  * Debug levels.
- * 
+ *
  * from libpurple/debug.h
  * I do not want this module to depend on purple directly, though.
  */
@@ -23,6 +23,30 @@ typedef enum
 } PurpleDebugLevel;
 
 #include <libgen.h>
+#if defined(__MINGW32__) || defined(_WIN32)
+#define CLASSPATH_SEPARATOR ';'
+#include <dirent.h>
+#include <windows.h>
+#ifndef OWN_FILE_NAME
+#error OWN_FILE_NAME not set.
+#endif
+char *find_own_path() {
+    const DWORD nSize = 1024;
+    char lpFilename[nSize];
+    if (GetModuleFileName(GetModuleHandle(OWN_FILE_NAME), lpFilename, nSize) > 0) {
+        char *path = dirname(g_strdup(lpFilename));
+        for (char *p = path; *p != 0; p++) {
+            if (*p == '\\') {
+                *p = '/';
+            }
+        }
+        return path;
+    } else {
+        return NULL;
+    }
+}
+#else
+#define CLASSPATH_SEPARATOR ':'
 #define __USE_GNU
 #include <dlfcn.h>
 char *find_own_path() {
@@ -33,6 +57,7 @@ char *find_own_path() {
         return NULL;
     }
 }
+#endif
 
 void purplesignal_error(uintptr_t pc, int level, const char *message) {
     assert(level > 0);
@@ -48,15 +73,15 @@ char *readdir_of_jars(const char *path, const char *prefix) {
     char *out = NULL;
     GString *classpath = g_string_new(prefix);
     DIR *dp;
-    struct dirent *ep;     
-    dp = opendir (path);
+    struct dirent *ep;
+    dp = opendir(path);
     if (dp == NULL) {
         out = g_strdup_printf("Could not open directory '%s'.", path);
     } else {
         while ((ep = readdir(dp)) != NULL) {
             const char *extension = strrchr(ep->d_name, '.');
             if (extension != NULL && strcmp(extension, ".jar") == 0) { // consider only .jar files
-                g_string_append_printf(classpath, ":%s/%s", path, ep->d_name);
+                g_string_append_printf(classpath, "%c%s/%s", CLASSPATH_SEPARATOR, path, ep->d_name);
                 if (strstr(ep->d_name, "signal-cli") != NULL) {
                     signal_cli_jar_found = TRUE;
                 }
@@ -75,7 +100,7 @@ char *readdir_of_jars(const char *path, const char *prefix) {
     }
 }
 
-const char *purplesignal_init(const char *signal_cli_path, SignalJVM *sjvm) {
+char *purplesignal_init(const char *signal_cli_path, SignalJVM *sjvm) {
     if (sjvm->vm != NULL && sjvm->env != NULL) {
         signal_debug_async(PURPLE_DEBUG_INFO, "jni pointers not null. JVM seems to be initialized already.\n");
         return NULL;
@@ -93,7 +118,7 @@ const char *purplesignal_init(const char *signal_cli_path, SignalJVM *sjvm) {
             g_free(librarypath);
             return classpath;
         }
-        
+
         JavaVMInitArgs vm_args;
         const unsigned int nOptions = 3;
         JavaVMOption options[nOptions];
@@ -123,24 +148,30 @@ void purplesignal_destroy(SignalJVM *sjvm) {
 }
 
 const char *purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, uintptr_t connection, const char* username) {
+    signal_debug_async(PURPLE_DEBUG_INFO, "Looking up class…");
     ps->class = (*sjvm.env)->FindClass(sjvm.env, "de/hehoe/purple_signal/PurpleSignal");
     if (ps->class == NULL) {
-        return "Failed to find PurpleSignal class.";
+        (*sjvm.env)->ExceptionDescribe(sjvm.env);
+        return "Failed to find PurpleSignal class (more information might be printed to the command-line).";
     }
+    signal_debug_async(PURPLE_DEBUG_INFO, "Looking up constructor…");
     jmethodID constructor = (*sjvm.env)->GetMethodID(sjvm.env, ps->class, "<init>", "(JLjava/lang/String;)V");
     if (constructor == NULL) {
         return "Failed to find PurpleSignal constructor.";
     }
     jstring jusername = (*sjvm.env)->NewStringUTF(sjvm.env, username);
     // TODO: find out if jstrings need to be destroyed after usage
+    signal_debug_async(PURPLE_DEBUG_INFO, "Creating new instance…");
     ps->instance = (*sjvm.env)->NewObject(sjvm.env, ps->class, constructor, connection, jusername);
     if (ps->instance == NULL) {
         return "Failed to create an instance of PurpleSignal.";
     }
+    signal_debug_async(PURPLE_DEBUG_INFO, "Looking up mwthod…");
     jmethodID method = (*sjvm.env)->GetMethodID(sjvm.env, ps->class, "startReceiving", "()V");
     if (method == NULL) {
         return "Failed to find method startReceiving.";
     }
+    signal_debug_async(PURPLE_DEBUG_INFO, "Starting background thread…");
     (*sjvm.env)->CallVoidMethod(sjvm.env, ps->instance, method);
     return NULL;
 }

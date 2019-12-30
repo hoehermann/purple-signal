@@ -13,8 +13,8 @@ typedef struct {
 
 typedef struct {
     uintptr_t pc;
-    const char *who; 
-    const char *message; 
+    const char *who;
+    const char *message;
     signed long timestamp;
     int error;
 } PurpleSignalMessage;
@@ -22,7 +22,7 @@ typedef struct {
 void signal_handle_message_async(PurpleSignalMessage *psm);
 void signal_debug_async(int level, const char *message);
 
-const char *purplesignal_init(const char *signal_cli_path, SignalJVM *sjvm);
+char *purplesignal_init(const char *signal_cli_path, SignalJVM *sjvm);
 void purplesignal_destroy(SignalJVM *ps);
 
 const char *purplesignal_login(SignalJVM signaljvm, PurpleSignal *ps, uintptr_t connection, const char *username);

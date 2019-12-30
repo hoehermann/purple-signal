@@ -150,12 +150,12 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
     }
 
     static {
-        System.loadLibrary("signal"); // TODO: change library name. this looks like it is asking for trouble already
+        System.loadLibrary("purple-signal");
     }
 
     public static native void handleMessageNatively(long connection, String who, String content, long timestamp);
     public static native void handleErrorNatively(long connection, String error);
-    
+
     final int DEBUG_LEVEL_INFO = 1; // from libpurple/debug.h
     public static native void logNatively(int level, String text);
 }

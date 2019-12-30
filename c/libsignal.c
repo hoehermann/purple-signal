@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
- 
+
  /*
   * Please note this is the third purple plugin I have ever written.
   * I still have no idea what I am doing.
@@ -29,10 +29,15 @@
 #endif
 
 #define _(a) (a)
+
 #include "purple_compat.h"
 #if PURPLE_VERSION_CHECK(3, 0, 0)
-#perror Purple3 not supported.
+#error Purple3 not supported.
 #endif
+
+//#define STRING2(x) #x
+//#define STRING(x) STRING2(x)
+//#pragma message STRING(PURPLE_INIT_PLUGIN(a,b,c))
 
 #include "libsignal-jni.h"
 
@@ -122,7 +127,7 @@ signal_login(PurpleAccount *account)
     PurpleConnection *pc = purple_account_get_connection(account);
 
     const char *libdir = purple_account_get_string(account, SIGNAL_OPTION_LIBDIR, SIGNAL_DEFAULT_LIBDIR);
-    const char *errormsg = purplesignal_init(libdir, &signaljvm);
+    char *errormsg = purplesignal_init(libdir, &signaljvm);
     if (errormsg) {
         purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, errormsg);
         g_free(errormsg);
