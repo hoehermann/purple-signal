@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.11)
-project(purple-signal)
+set(PROJECT_NAME "purple-signal")
+project(${PROJECT_NAME})
 add_subdirectory(java)
 add_subdirectory(c)

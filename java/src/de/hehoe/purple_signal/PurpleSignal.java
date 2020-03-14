@@ -54,6 +54,8 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
     private boolean keepReceiving;
 
     public PurpleSignal(long connection, String username) {
+        System.out.println("PurpleSignal("+String.format("0x%08X", connection)+", "+username+")…");
+
         this.connection = connection;
         this.keepReceiving = false;
 
@@ -90,7 +92,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
             }
         } catch (IOException | NotAGroupMemberException | GroupNotFoundException | AttachmentInvalidException e) {
             handleErrorNatively(this.connection, "Exception while waiting for or receiving message: " + e.getMessage());
-        }
+        } // TODO: null pointer exception can occurr if user is not registered at all
         logNatively(DEBUG_LEVEL_INFO, "RECEIVING DONE");
     }
 
@@ -106,13 +108,14 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
         this.keepReceiving = false;
     }
 
+/*
     public static void main(String[] args) {
         System.out.println("Creating instance…");
         PurpleSignal ps = new PurpleSignal(0, args[0]);
         System.out.println("Starting to receive on main thread…");
         ps.run();
     }
-
+*/
     @Override
     public void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, Throwable exception) {
         logNatively(DEBUG_LEVEL_INFO, "RECEIVED SOMETHING!");
@@ -153,9 +156,8 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
         System.loadLibrary("purple-signal");
     }
 
-    public static native void handleMessageNatively(long connection, String who, String content, long timestamp);
-    public static native void handleErrorNatively(long connection, String error);
-
     final int DEBUG_LEVEL_INFO = 1; // from libpurple/debug.h
     public static native void logNatively(int level, String text);
+    public static native void handleMessageNatively(long connection, String who, String content, long timestamp);
+    public static native void handleErrorNatively(long connection, String error);
 }

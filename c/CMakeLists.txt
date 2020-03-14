@@ -1,10 +1,6 @@
 # stolen from skype4pidgin/skypeweb/CMakeLists.txt
 
-set(PROJECT_NAME "signal" C)
-
-project(${PROJECT_NAME})
-
-find_package(JNI REQUIRED)
+#find_package(JNI REQUIRED)
 
 find_package(PkgConfig REQUIRED)
 
@@ -14,9 +10,11 @@ pkg_check_modules(PURPLE REQUIRED purple)
 add_definitions(-Wall)
 
 include_directories(
-    ${PURPLE_INCLUDE_DIRS}
-    ${GLIB2_INCLUDE_DIRS}
-    ${JNI_INCLUDE_DIRS}
+    /var/www/www-buildbot/pidgin-devel/dirent
+    /var/www/www-buildbot/pidgin-devel/pidgin-2.13.0/libpurple
+    /var/www/www-buildbot/pidgin-devel/gtk+/lib/glib-2.0/include/
+    /var/www/www-buildbot/pidgin-devel/gtk+/include/glib-2.0/
+    #${JNI_INCLUDE_DIRS}
     )
 
 set(SRC_LIST
@@ -30,9 +28,12 @@ add_library(${PROJECT_NAME} SHARED ${SRC_LIST})
 #add_executable(${PROJECT_NAME} ${SRC_LIST})
 
 target_link_libraries(${PROJECT_NAME}
-    ${PURPLE_LIBRARIES}
-    ${GLIB2_LIBRARIES}
-    ${JNI_LIBRARIES}
+    #${PURPLE_LIBRARIES}
+    /var/www/www-buildbot/pidgin-devel/pidgin-2.13.0-offline/liburple.dll
+    #${GLIB2_LIBRARIES}
+    /var/www/www-buildbot/pidgin-devel/pidgin-2.13.0-offline/libglib-2.0-0.dll
+    #${JNI_LIBRARIES}
+    /var/www/www-buildbot/pidgin-devel/jdk8u232-b09/lib/jvm.lib
     purple_signal_native # this is a target defined by the Java part. needs CMake 3.11
     )
 
@@ -62,4 +63,11 @@ endif()
 
 file(STRINGS "../VERSION" SIGNAL_PLUGIN_VERSION)
 message(STATUS "SIGNAL_PLUGIN_VERSION ${SIGNAL_PLUGIN_VERSION}")
-target_compile_definitions(${PROJECT_NAME} PUBLIC SIGNAL_PLUGIN_VERSION="${SIGNAL_PLUGIN_VERSION}")
+SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES PREFIX "")
+target_compile_definitions(${PROJECT_NAME} PUBLIC SIGNAL_PLUGIN_VERSION="${SIGNAL_PLUGIN_VERSION}" OWN_FILE_NAME="${PROJECT_NAME}.dll")
+if (MINGW)
+    set_target_properties (${PROJECT_NAME} PROPERTIES
+        LINK_FLAGS "-Wl,--add-stdcall-alias"
+        CLEAN_DIRECT_OUTPUT 1 
+    )
+endif()

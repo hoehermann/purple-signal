@@ -120,11 +120,11 @@ char *purplesignal_init(const char *signal_cli_path, SignalJVM *sjvm) {
         }
 
         JavaVMInitArgs vm_args;
-        const unsigned int nOptions = 3;
+        const unsigned int nOptions = 2;
         JavaVMOption options[nOptions];
         options[0].optionString = classpath;
         options[1].optionString = librarypath;
-        options[2].optionString = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=10044"; // TODO: conditionally enable this only in debug builds. Or if Pidgin was started in debug mode?
+        //options[2].optionString = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=10044"; // TODO: conditionally enable this only in debug builds. Or if Pidgin was started in debug mode?
         vm_args.options = options;
         vm_args.nOptions = nOptions;
         vm_args.version  = JNI_VERSION_1_8;
@@ -160,13 +160,19 @@ const char *purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, uintptr_t conne
         return "Failed to find PurpleSignal constructor.";
     }
     jstring jusername = (*sjvm.env)->NewStringUTF(sjvm.env, username);
+    if (jusername == NULL) {
+        return "NewStringUTF failed.";
+    }
+    printf("username: %s\n", username);
+    printf("jusername: %p\n", &jusername);
     // TODO: find out if jstrings need to be destroyed after usage
     signal_debug_async(PURPLE_DEBUG_INFO, "Creating new instance…");
-    ps->instance = (*sjvm.env)->NewObject(sjvm.env, ps->class, constructor, connection, jusername);
+    jlong jconnection = connection;
+    ps->instance = (*sjvm.env)->NewObject(sjvm.env, ps->class, constructor, jconnection, jusername);
     if (ps->instance == NULL) {
         return "Failed to create an instance of PurpleSignal.";
     }
-    signal_debug_async(PURPLE_DEBUG_INFO, "Looking up mwthod…");
+    signal_debug_async(PURPLE_DEBUG_INFO, "Looking up method…");
     jmethodID method = (*sjvm.env)->GetMethodID(sjvm.env, ps->class, "startReceiving", "()V");
     if (method == NULL) {
         return "Failed to find method startReceiving.";
