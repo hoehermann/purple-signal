@@ -9,5 +9,6 @@ cmake \
 -DJAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64 \
 -DJAVA_HOME_WIN32=../../jdk8u232-b09 \
 -DSIGNAL_CLI_LIB_DIR=../../signal-cli-0.6.5/lib \
+-DDIRENT_INCLUDE_DIRS=../../dirent \
 -DCMAKE_BUILD_TYPE=Debug \
 ..
