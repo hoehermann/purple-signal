@@ -4,17 +4,28 @@ find_package(JNI REQUIRED)
 
 find_package(PkgConfig REQUIRED)
 
-pkg_check_modules(GLIB REQUIRED  glib-2.0)
+#set(_PKG_CONFIG_EXECUTABLE ${PKG_CONFIG_EXECUTABLE})
+#pkg_check_modules(GLIB2 REQUIRED  glib-2.0)
 pkg_check_modules(PURPLE REQUIRED purple)
+#set(PKG_CONFIG_EXECUTABLE ${_PKG_CONFIG_EXECUTABLE})
 
 add_definitions(-Wall)
 
+#message(STATUS
+#"GLIB2_INCLUDE_DIRS: ${GLIB2_INCLUDE_DIRS}"
+#)
+message(STATUS
+"PURPLE_INCLUDE_DIRS: ${PURPLE_INCLUDE_DIRS}"
+)
+
 include_directories(
     /var/www/www-buildbot/pidgin-devel/dirent
-    /var/www/www-buildbot/pidgin-devel/pidgin-2.13.0/libpurple
-    /var/www/www-buildbot/pidgin-devel/gtk+/lib/glib-2.0/include/
-    /var/www/www-buildbot/pidgin-devel/gtk+/include/glib-2.0/
-    #${JNI_INCLUDE_DIRS}
+    #/var/www/www-buildbot/pidgin-devel/pidgin-2.13.0/libpurple
+    ${PURPLE_INCLUDE_DIRS}
+    #${GLIB2_INCLUDE_DIRS}
+    #/var/www/www-buildbot/pidgin-devel/gtk+/lib/glib-2.0/include/
+    #/var/www/www-buildbot/pidgin-devel/gtk+/include/glib-2.0/
+    ${JNI_INCLUDE_DIRS}
     )
 
 set(SRC_LIST
@@ -46,18 +57,9 @@ exec_program("${PKG_CONFIG_EXECUTABLE} --variable=plugindir purple 2>/dev/null"
     )
 
 if (NOT PURPLE_PLUGINDIR_RET EQUAL 0)
-    message(FATAL_ERROR "${PKG_CONFIG_EXECUTABLE} --variable=plugindir purple -- returned a non-null error code")
-endif()
-
-install(TARGETS ${PROJECT_NAME} DESTINATION ${LIB_INSTALL_DIR})
-
-exec_program("${PKG_CONFIG_EXECUTABLE} --variable=datadir purple 2>/dev/null"
-    OUTPUT_VARIABLE PURPLE_DATADIR
-    RETURN_VALUE PURPLE_DATADIR_RET
-    )
-
-if (NOT PURPLE_DATADIR_RET EQUAL 0)
-    message(FATAL_ERROR "${PKG_CONFIG_EXECUTABLE} --variable=datadir purple -- returned a non-null error code")
+    message(WARNING "${PKG_CONFIG_EXECUTABLE} --variable=plugindir purple -- returned a non-null error code")
+else()
+    install(TARGETS ${PROJECT_NAME} DESTINATION ${LIB_INSTALL_DIR})
 endif()
 
 file(STRINGS "../VERSION" SIGNAL_PLUGIN_VERSION)
