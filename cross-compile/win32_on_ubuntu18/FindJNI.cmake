@@ -1,18 +1,21 @@
 #set(JAVA_HOME_WIN32 /var/www/www-buildbot/pidgin-devel/jdk8u232-b09)
 set(JAVA_HOME_WIN32 "" CACHE PATH "JAVA_HOME of Java for Windows (32 bit)")
-set(JAVA_AWT_LIBRARY ${JAVA_HOME_WIN32}/jre/bin/jawt.dll)
-set(JAVA_JVM_LIBRARY ${JAVA_HOME_WIN32}/jre/bin/client/jvm.dll)
+#set(JAVA_AWT_LIBRARY ${JAVA_HOME_WIN32}/jre/bin/jawt.dll)
+#set(JAVA_JVM_LIBRARY ${JAVA_HOME_WIN32}/jre/bin/client/jvm.dll)
+set(JAVA_JVM_LIBRARY ${JAVA_HOME_WIN32}/lib/jvm.lib)
 set(JAVA_INCLUDE_PATH ${JAVA_HOME_WIN32}/include)
 set(JAVA_INCLUDE_PATH2 ${JAVA_HOME_WIN32}/include/win32)
-set(JAVA_AWT_INCLUDE_PATH ${JAVA_INCLUDE_PATH})
-set(JNI_LIBRARIES ${JAVA_AWT_LIBRARY} ${JAVA_JVM_LIBRARY})
+#set(JAVA_AWT_INCLUDE_PATH ${JAVA_INCLUDE_PATH})
+#set(JNI_LIBRARIES ${JAVA_AWT_LIBRARY} ${JAVA_JVM_LIBRARY})
+set(JNI_LIBRARIES ${JAVA_JVM_LIBRARY})
+#set(JNI_LIBRARIES ${JAVA_HOME_WIN32}/lib/jvm.lib)
 set(JNI_INCLUDE_DIRS ${JAVA_INCLUDE_PATH} ${JAVA_INCLUDE_PATH2})
 set(JNI_FOUND TRUE)
 
 if(NOT EXISTS ${JAVA_JVM_LIBRARY}) # TODO: check other files, too
   message(FATAL_ERROR "${JAVA_JVM_LIBRARY} not found. Check JAVA_HOME_WIN32 option.")
 else()
-  find_package_message(JNI "Found JNI: ${JAVA_JVM_LIBRARY}" "[${JAVA_JVM_LIBRARY}]")
+  find_package_message(JNI "Found JNI: jvm.lib is at ${JAVA_JVM_LIBRARY}" "[${JAVA_JVM_LIBRARY}]")
 endif()
 #message(STATUS
 #JNI_INCLUDE_DIRS ${JNI_INCLUDE_DIRS} "\n"

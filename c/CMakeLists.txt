@@ -1,6 +1,6 @@
 # stolen from skype4pidgin/skypeweb/CMakeLists.txt
 
-#find_package(JNI REQUIRED)
+find_package(JNI REQUIRED)
 
 find_package(PkgConfig REQUIRED)
 
@@ -32,8 +32,7 @@ target_link_libraries(${PROJECT_NAME}
     /var/www/www-buildbot/pidgin-devel/pidgin-2.13.0-offline/liburple.dll
     #${GLIB2_LIBRARIES}
     /var/www/www-buildbot/pidgin-devel/pidgin-2.13.0-offline/libglib-2.0-0.dll
-    #${JNI_LIBRARIES}
-    /var/www/www-buildbot/pidgin-devel/jdk8u232-b09/lib/jvm.lib
+    ${JNI_LIBRARIES}
     purple_signal_native # this is a target defined by the Java part. needs CMake 3.11
     )
 
@@ -68,6 +67,6 @@ target_compile_definitions(${PROJECT_NAME} PUBLIC SIGNAL_PLUGIN_VERSION="${SIGNA
 if (MINGW)
     set_target_properties (${PROJECT_NAME} PROPERTIES
         LINK_FLAGS "-Wl,--add-stdcall-alias"
-        CLEAN_DIRECT_OUTPUT 1 
+        CLEAN_DIRECT_OUTPUT 1
     )
 endif()
