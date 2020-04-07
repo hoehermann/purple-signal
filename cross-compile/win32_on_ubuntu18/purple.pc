@@ -1,0 +1,10 @@
+prefix=defined_automatically
+#put this file in ../../pidgin-2.13.0/libpurple/anyname/pkgconfig
+#plugindir=nul
+
+Name: libpurple
+Description: win32 cross compile dummy
+Version: 2.13.0
+Requires: glib-2.0
+Cflags: -I${prefix}
+Libs: -L${prefix} -lpurple
