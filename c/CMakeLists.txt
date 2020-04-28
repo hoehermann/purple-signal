@@ -1,4 +1,4 @@
-# stolen from skype4pidgin/skypeweb/CMakeLists.txt
+# based on skype4pidgin/skypeweb/CMakeLists.txt
 
 find_package(JNI REQUIRED)
 
@@ -14,6 +14,9 @@ message(STATUS
 message(STATUS
 "PURPLE_LIBRARY_DIRS: ${PURPLE_LIBRARY_DIRS}"
 )
+
+# TODO: check for DIRENT_INCLUDE_DIRS on Windows
+# obtainable from https://github.com/tronkko/dirent/blob/master/include/dirent.h
 
 include_directories(${PROJECT_NAME}
     ${PURPLE_INCLUDE_DIRS}
@@ -34,11 +37,20 @@ add_library(${PROJECT_NAME} SHARED ${SRC_LIST})
 target_link_directories(${PROJECT_NAME}
     PUBLIC ${PURPLE_LIBRARY_DIRS}
     )
+    
+get_target_property(_classDir purple_signal CLASSDIR)
+add_custom_target(
+    embed_purple_signal
+    # TODO: find a CMake-ier way of generating this file
+    ld -r -b binary -o ${CMAKE_CURRENT_BINARY_DIR}/PurpleSignal.o ${_classDir}/de/hehoe/purple_signal/PurpleSignal.class
+)
+add_dependencies(${PROJECT_NAME} embed_purple_signal)
 
 target_link_libraries(${PROJECT_NAME}
     ${PURPLE_LIBRARIES}
     ${JNI_LIBRARIES}
     purple_signal_native # this is a target defined by the Java part. needs CMake 3.11
+    ${CMAKE_CURRENT_BINARY_DIR}/PurpleSignal.o
     )
 
 exec_program("${PKG_CONFIG_EXECUTABLE} --variable=plugindir purple 2>/dev/null"
@@ -54,9 +66,14 @@ endif()
 
 file(STRINGS "../VERSION" SIGNAL_PLUGIN_VERSION)
 message(STATUS "SIGNAL_PLUGIN_VERSION ${SIGNAL_PLUGIN_VERSION}")
+
+# remove automatic prefix "lib" from build target name
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES PREFIX "")
+
 target_compile_definitions(${PROJECT_NAME} PUBLIC SIGNAL_PLUGIN_VERSION="${SIGNAL_PLUGIN_VERSION}" OWN_FILE_NAME="${PROJECT_NAME}.dll")
+
 if (MINGW)
+    # TODO: find out why I thought this was necessary
     set_target_properties (${PROJECT_NAME} PROPERTIES
         LINK_FLAGS "-Wl,--add-stdcall-alias"
         CLEAN_DIRECT_OUTPUT 1
