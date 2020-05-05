@@ -14,5 +14,4 @@
 1. [purple-signal](https://buildbot.hehoe.de/purple-signal/builds/)  
   Both purple-signal.dll and purple_signal.jar are needed.  
   Put them into `c:\opt\pidgin\plugins`.  
-  Launch Pidgin, create a new account. Enter your phone number for a username. Set the signal-cli path to `c:\opt\signal-cli\lib`.  
-  Watch the Java VM crash. Enjoy not having a working signal plug-in on Windows.
+  Launch Pidgin, create a new account. Enter your phone number for a username. Set the signal-cli path to `c:\opt\signal-cli\lib`.
