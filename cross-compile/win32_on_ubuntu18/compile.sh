@@ -1,6 +1,10 @@
 #/bin/sh
-export PKG_CONFIG_LIBDIR=$(realpath ../../gtk+/lib/pkgconfig)
-export PKG_CONFIG_PATH=$(realpath ../../pidgin-2.13.0/libpurple/lib/pkgconfig)
+export PKG_CONFIG_LIBDIR="$(realpath ../../gtk+/lib/pkgconfig)"
+mkdir -p ../../pidgin-2.13.0/libpurple/lib/pkgconfig
+export PKG_CONFIG_PATH="$(realpath ../../pidgin-2.13.0/libpurple/lib/pkgconfig)"
+cp -n "$(dirname "$0")/purple.pc" "$PKG_CONFIG_PATH/"
+
+cp -n ../../pidgin-2.13.0-offline/libpurple.dll ../../pidgin-2.13.0/libpurple
 
 cmake \
 -DCMAKE_TOOLCHAIN_FILE=../cross-compile/win32_on_ubuntu18/toolchain.cmake \
@@ -12,3 +16,5 @@ cmake \
 -DDIRENT_INCLUDE_DIRS=../../dirent \
 -DCMAKE_BUILD_TYPE=Debug \
 ..
+
+make
