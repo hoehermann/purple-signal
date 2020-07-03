@@ -7,18 +7,15 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import org.asamk.signal.AttachmentInvalidException;
-import org.asamk.signal.GroupNotFoundException;
-import org.asamk.signal.NotAGroupMemberException;
 import org.asamk.signal.manager.Manager;
 import org.asamk.signal.manager.Manager.ReceiveMessageHandler;
+import org.asamk.signal.manager.ServiceConfig;
 import org.asamk.signal.util.SecurityProvider;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import org.whispersystems.signalservice.internal.util.Base64;
+import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.asamk.signal.util.IOUtils;
 
 public class PurpleSignal implements ReceiveMessageHandler, Runnable {
@@ -54,25 +51,30 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
     private boolean keepReceiving;
 
     public PurpleSignal(long connection, String username) {
-        System.out.println("PurpleSignal("+String.format("0x%08X", connection)+", "+username+")…");
-
-        this.connection = connection;
-        this.keepReceiving = false;
-
-        // stolen from signald/src/main/java/io/finn/signald/Main.java
-
-        // Workaround for BKS truststore
-        Security.insertProviderAt(new SecurityProvider(), 1);
-        Security.addProvider(new BouncyCastleProvider());
-
-        String data_path = getDefaultDataPath();
-        logNatively(DEBUG_LEVEL_INFO, "Using data folder " + data_path);
-        this.manager = new Manager(username, data_path);
         try {
-            this.manager.init();
-            logNatively(DEBUG_LEVEL_INFO, "Logged in with " + manager.getUsername());
-        } catch (Exception e) {
-            handleErrorNatively(this.connection, "Error loading state file: " + e.getMessage());
+            System.out.println("PurpleSignal("+String.format("0x%08X", connection)+", "+username+")…");
+
+            this.connection = connection;
+            this.keepReceiving = false;
+
+            // stolen from signald/src/main/java/io/finn/signald/Main.java
+
+            // Workaround for BKS truststore
+            Security.insertProviderAt(new SecurityProvider(), 1);
+            Security.addProvider(new BouncyCastleProvider());
+
+            String data_path = getDefaultDataPath();
+            logNatively(DEBUG_LEVEL_INFO, "Using data folder " + data_path);
+            final SignalServiceConfiguration serviceConfiguration = ServiceConfig.createDefaultServiceConfiguration("purple-signal");
+            try {
+                this.manager = Manager.init(username, data_path, serviceConfiguration, "purple-signal");
+                logNatively(DEBUG_LEVEL_INFO, "Logged in with " + manager.getUsername());
+            } catch (Exception e) {
+                handleErrorNatively(this.connection, "Error loading state file: " + e.getMessage());
+            }
+        } catch (Throwable t) {
+            t.printStackTrace();
+            throw t;
         }
     }
 
@@ -90,9 +92,9 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
                 this.manager.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout,
                     ignoreAttachments, this);
             }
-        } catch (IOException | NotAGroupMemberException | GroupNotFoundException | AttachmentInvalidException e) {
+        } catch (IOException e) {
             handleErrorNatively(this.connection, "Exception while waiting for or receiving message: " + e.getMessage());
-        } // TODO: null pointer exception can occurr if user is not registered at all
+        } // TODO: null pointer exception can occur if user is not registered at all
         logNatively(DEBUG_LEVEL_INFO, "RECEIVING DONE");
     }
 
@@ -106,6 +108,13 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
     public void stopReceiving() {
         this.keepReceiving = false;
+        if (this.manager != null) {
+            try {
+				this.manager.close();
+			} catch (IOException e) {
+				// I really don't care
+			}
+        }
     }
 
 /*
@@ -126,26 +135,26 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
         }
         if (envelope != null && content != null) {
             SignalServiceAddress source = envelope.getSourceAddress();
-            String who = source.getNumber();
-            long timestamp = envelope.getTimestamp();
-            boolean isReceipt = envelope.isReceipt();
-            if (isReceipt) {
-                // TODO: display receipts as system-messages
-            } else {
-                if (content.getDataMessage().isPresent()) {
-                    SignalServiceDataMessage dataMessage = content.getDataMessage().get();
-                    timestamp = dataMessage.getTimestamp();
-                    if (dataMessage.getGroupInfo().isPresent()) {
-                        SignalServiceGroup groupInfo = dataMessage.getGroupInfo().get();
-                        who = Base64.encodeBytes(groupInfo.getGroupId()); // TODO: support groups
-                                                                          // properly
-                    }
-                    if (dataMessage.getBody().isPresent()) {
-                        String message = dataMessage.getBody().get();
-                        handleMessageNatively(this.connection, who, message, timestamp);
-                        // TODO: do not send receipt until handleMessageNatively returns successfully
-                    }
-                }
+            String who = source.getNumber().orNull();
+            if (who != null) {
+	            long timestamp = envelope.getTimestamp();
+	            boolean isReceipt = envelope.isReceipt();
+	            if (isReceipt) {
+	                // TODO: display receipts as system-messages
+	            } else {
+	                if (content.getDataMessage().isPresent()) {
+	                    SignalServiceDataMessage dataMessage = content.getDataMessage().get();
+	                    timestamp = dataMessage.getTimestamp();
+	                    if (dataMessage.getGroupContext().isPresent()) {
+	                        // TODO: support groups
+	                    }
+	                    if (dataMessage.getBody().isPresent()) {
+	                        String message = dataMessage.getBody().get();
+	                        handleMessageNatively(this.connection, who, message, timestamp);
+	                        // TODO: do not send receipt until handleMessageNatively returns successfully
+	                    }
+	                }
+	            }
             }
             // TODO: support other message types
         }
