@@ -189,8 +189,7 @@ static int
 signal_send_im(PurpleConnection *pc, const gchar *who, const gchar *message, PurpleMessageFlags flags)
 {
     SignalAccount *sa = purple_connection_get_protocol_data(pc);
-    purplesignal_send(signaljvm, &sa->ps, (uintptr_t)pc, who, message);
-    return 0;
+    return purplesignal_send(signaljvm, &sa->ps, (uintptr_t)pc, who, message);
 }
 
 static void

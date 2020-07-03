@@ -226,16 +226,15 @@ int purplesignal_send(SignalJVM sjvm, PurpleSignal *ps, uintptr_t pc, const char
         purplesignal_error(pc, PURPLE_DEBUG_ERROR, "PurpleSignal has not been initialized.");
         return 1;
     }
-    jmethodID method = (*sjvm.env)->GetMethodID(sjvm.env, ps->class, "sendMessage", "(Ljava/lang/String;Ljava/lang/String;)V");
+    jmethodID method = (*sjvm.env)->GetMethodID(sjvm.env, ps->class, "sendMessage", "(Ljava/lang/String;Ljava/lang/String;)I");
     if (method == NULL) {
         purplesignal_error(pc, PURPLE_DEBUG_ERROR, "Failed to find method sendMessage.\n");
         return 0;
     }
     jstring jwho = (*sjvm.env)->NewStringUTF(sjvm.env, who);
     jstring jmessage = (*sjvm.env)->NewStringUTF(sjvm.env, message);
-    (*sjvm.env)->CallVoidMethod(sjvm.env, ps->instance, method, jwho, jmessage);
-    // TODO: call with int as return type
-    return 1;
+    jint ret = (*sjvm.env)->CallIntMethod(sjvm.env, ps->instance, method, jwho, jmessage);
+    return ret;
 }
 
 int main(int argc, char **argv) {

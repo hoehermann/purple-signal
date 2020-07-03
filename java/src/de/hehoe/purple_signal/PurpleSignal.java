@@ -5,8 +5,10 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
+import org.asamk.signal.manager.AttachmentInvalidException;
 import org.asamk.signal.manager.Manager;
 import org.asamk.signal.manager.Manager.ReceiveMessageHandler;
 import org.asamk.signal.manager.ServiceConfig;
@@ -15,6 +17,8 @@ import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
+import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.asamk.signal.util.IOUtils;
 
@@ -159,6 +163,19 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
             // TODO: support other message types
         }
 
+    }
+    
+    int sendMessage(String who, String message) {
+    	if (this.manager != null) {
+			try {
+				this.manager.sendMessage(message, null, Arrays.asList(who)); // https://stackoverflow.com/questions/20358883/
+				return 1;
+			} catch (IOException | AttachmentInvalidException | EncapsulatedExceptions | InvalidNumberException e) {
+				e.printStackTrace();
+				handleErrorNatively(this.connection, "Exception while sending message: " + e.getMessage());
+			}
+    	}
+    	return 0;
     }
 
     static {
