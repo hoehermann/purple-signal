@@ -5,7 +5,7 @@
 1. [a 32-bit Java](https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/)  
   Unpack it to a directory WITHOUT spaces. I assume `c:\opt\openjdk-8`.
   Modify your user's PATH environment variable to include `c:\opt\openjdk-8\jre\bin\client;`.
-1. [signal-cli](https://github.com/AsamK/signal-cli/releases/tag/v0.6.5)
+1. [signal-cli](https://github.com/AsamK/signal-cli/releases/tag/v0.6.8)
   Unpack it to a directory WITHOUT spaces. I assume `c:\opt\signal-cli`.  
   Use the command-line to register your phone number (internationalized format +491234567890).
 1. [Pidgin](https://sourceforge.net/projects/pidgin/files/Pidgin/2.13.0/pidgin-2.13.0-offline.exe/download)  
