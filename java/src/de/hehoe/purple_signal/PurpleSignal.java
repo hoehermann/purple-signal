@@ -9,10 +9,13 @@ import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 import org.asamk.signal.manager.AttachmentInvalidException;
+import org.asamk.signal.manager.GroupNotFoundException;
 import org.asamk.signal.manager.Manager;
 import org.asamk.signal.manager.Manager.ReceiveMessageHandler;
+import org.asamk.signal.manager.NotAGroupMemberException;
 import org.asamk.signal.manager.ServiceConfig;
 import org.asamk.signal.util.SecurityProvider;
+import org.asamk.signal.util.Util;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
@@ -22,6 +25,7 @@ import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptio
 import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.util.Base64;
+import org.asamk.signal.util.GroupIdFormatException;
 import org.asamk.signal.util.IOUtils;
 
 public class PurpleSignal implements ReceiveMessageHandler, Runnable {
@@ -130,7 +134,8 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
             if (who == null) {
             	logNatively(DEBUG_LEVEL_INFO, "Source is null – ignoring message.");
             } else if (content == null) {
-                handleErrorNatively(this.connection, "Failed to decrypt incoming message.");
+            	logNatively(DEBUG_LEVEL_INFO, "Failed to decrypt incoming message – ignoring.");
+                //handleErrorNatively(this.connection, "Failed to decrypt incoming message.");
             } else {
                 boolean isReceipt = envelope.isReceipt();
                 if (isReceipt) {
@@ -163,9 +168,14 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
     int sendMessage(String who, String message) {
         if (this.manager != null) {
             try {
-                this.manager.sendMessage(message, null, Arrays.asList(who)); // https://stackoverflow.com/questions/20358883/
+            	if (who.startsWith("+")) {
+            		this.manager.sendMessage(message, null, Arrays.asList(who)); // https://stackoverflow.com/questions/20358883/
+            	} else {
+                	byte[] groupId = Util.decodeGroupId(who);
+                	this.manager.sendGroupMessage(message, null, groupId);
+            	}
                 return 1;
-            } catch (IOException | AttachmentInvalidException | EncapsulatedExceptions | InvalidNumberException e) {
+            } catch (IOException | AttachmentInvalidException | EncapsulatedExceptions | InvalidNumberException | GroupIdFormatException | GroupNotFoundException | NotAGroupMemberException e) {
                 e.printStackTrace();
                 handleErrorNatively(this.connection, "Exception while sending message: " + e.getMessage());
             }

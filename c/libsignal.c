@@ -35,10 +35,6 @@
 #error Purple3 not supported.
 #endif
 
-//#define STRING2(x) #x
-//#define STRING(x) STRING2(x)
-//#pragma message STRING(PURPLE_INIT_PLUGIN(a,b,c))
-
 #include "libsignal-jni.h"
 
 #define SIGNAL_PLUGIN_ID "prpl-hehoe-signal"
@@ -61,7 +57,6 @@ typedef struct {
     PurpleAccount *account;
     PurpleConnection *pc;
     PurpleSignal ps;
-    GList *used_images; // for inline images
 } SignalAccount;
 
 SignalJVM signaljvm; // only one Java VM over all connections
