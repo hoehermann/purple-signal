@@ -170,7 +170,17 @@ const char *purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, uintptr_t conne
     jlong jconnection = connection;
     ps->instance = (*sjvm.env)->NewObject(sjvm.env, ps->class, constructor, jconnection, jusername);
     if (ps->instance == NULL) {
-        return "Failed to create an instance of PurpleSignal.";
+        //return "Failed to create an instance of PurpleSignal.";
+        jthrowable jexception;
+        jexception = (*sjvm.env)->ExceptionOccurred(sjvm.env);
+        jboolean isCopy = 0;
+        jclass jcls = (*sjvm.env)->FindClass(sjvm.env, "java/lang/Object");
+        jmethodID toString = (*sjvm.env)->GetMethodID(sjvm.env, jcls, "toString", "()Ljava/lang/String;");
+        jstring jstr = (*sjvm.env)->CallObjectMethod(sjvm.env, jexception, toString);
+        const char * utf = (*sjvm.env)->GetStringUTFChars(sjvm.env, jstr, &isCopy);
+        char * errmsg = g_strdup(utf);
+        (*sjvm.env)->ReleaseStringUTFChars(sjvm.env, jstr, utf);
+        return errmsg;
     }
     signal_debug_async(PURPLE_DEBUG_INFO, "Looking up method…");
     jmethodID method = (*sjvm.env)->GetMethodID(sjvm.env, ps->class, "startReceiving", "()V");

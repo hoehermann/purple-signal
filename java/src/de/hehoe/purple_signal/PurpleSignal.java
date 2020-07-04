@@ -12,6 +12,7 @@ import org.asamk.signal.manager.AttachmentInvalidException;
 import org.asamk.signal.manager.Manager;
 import org.asamk.signal.manager.Manager.ReceiveMessageHandler;
 import org.asamk.signal.manager.ServiceConfig;
+import org.asamk.signal.storage.SignalAccount;
 import org.asamk.signal.util.SecurityProvider;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
@@ -26,7 +27,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
     // stolen from signal-cli/src/main/java/org/asamk/signal/Main.java
     /**
-     * Uses $XDG_DATA_HOME/signal-cli if it exists, or if none of the legacy
+     * Uses $HOME/.local/share/signal-cli if it exists, or if none of the legacy
      * directories exist: - $HOME/.config/signal - $HOME/.config/textsecure
      *
      * @return the data directory to be used by signal-cli.
@@ -54,32 +55,34 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
     private long connection;
     private boolean keepReceiving;
 
-    public PurpleSignal(long connection, String username) {
-        try {
-            System.out.println("PurpleSignal("+String.format("0x%08X", connection)+", "+username+")…");
-
+    public PurpleSignal(long connection, String username) throws IOException {
+        //try {
             this.connection = connection;
             this.keepReceiving = false;
 
             // stolen from signald/src/main/java/io/finn/signald/Main.java
-
             // Workaround for BKS truststore
             Security.insertProviderAt(new SecurityProvider(), 1);
             Security.addProvider(new BouncyCastleProvider());
 
-            String data_path = getDefaultDataPath();
-            logNatively(DEBUG_LEVEL_INFO, "Using data folder " + data_path);
+            String settingsPath = getDefaultDataPath();
+            logNatively(DEBUG_LEVEL_INFO, "Using settings path " + settingsPath);
             final SignalServiceConfiguration serviceConfiguration = ServiceConfig.createDefaultServiceConfiguration("purple-signal");
-            try {
-                this.manager = Manager.init(username, data_path, serviceConfiguration, "purple-signal");
-                logNatively(DEBUG_LEVEL_INFO, "Logged in with " + manager.getUsername());
-            } catch (Exception e) {
-                handleErrorNatively(this.connection, "Error loading state file: " + e.getMessage());
-            }
-        } catch (Throwable t) {
+            //try {
+                this.manager = Manager.init(username, settingsPath, serviceConfiguration, "purple-signal");
+                if (this.manager.isRegistered()) {
+                    logNatively(DEBUG_LEVEL_INFO, "Using registered user " + manager.getUsername());
+                } else {
+                	throw new IllegalStateException("User not registered.");
+                	//handleErrorNatively(this.connection, "User not registered.");
+                }
+            //} catch (Exception e) {
+            //    handleErrorNatively(this.connection, "Error loading state file: " + e.getMessage());
+            //}
+        /*} catch (Throwable t) {
             t.printStackTrace();
             throw t;
-        }
+        }*/
     }
 
     public void run() {
@@ -114,21 +117,14 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
         this.keepReceiving = false;
         if (this.manager != null) {
             try {
-				this.manager.close();
-			} catch (IOException e) {
-				// I really don't care
-			}
+                this.manager.close();
+            } catch (IOException e) {
+                // I really don't care
+                e.printStackTrace();
+            }
         }
     }
 
-/*
-    public static void main(String[] args) {
-        System.out.println("Creating instance…");
-        PurpleSignal ps = new PurpleSignal(0, args[0]);
-        System.out.println("Starting to receive on main thread…");
-        ps.run();
-    }
-*/
     @Override
     public void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, Throwable exception) {
         logNatively(DEBUG_LEVEL_INFO, "RECEIVED SOMETHING!");
@@ -141,24 +137,24 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
             SignalServiceAddress source = envelope.getSourceAddress();
             String who = source.getNumber().orNull();
             if (who != null) {
-	            long timestamp = envelope.getTimestamp();
-	            boolean isReceipt = envelope.isReceipt();
-	            if (isReceipt) {
-	                // TODO: display receipts as system-messages
-	            } else {
-	                if (content.getDataMessage().isPresent()) {
-	                    SignalServiceDataMessage dataMessage = content.getDataMessage().get();
-	                    timestamp = dataMessage.getTimestamp();
-	                    if (dataMessage.getGroupContext().isPresent()) {
-	                        // TODO: support groups
-	                    }
-	                    if (dataMessage.getBody().isPresent()) {
-	                        String message = dataMessage.getBody().get();
-	                        handleMessageNatively(this.connection, who, message, timestamp);
-	                        // TODO: do not send receipt until handleMessageNatively returns successfully
-	                    }
-	                }
-	            }
+                long timestamp = envelope.getTimestamp();
+                boolean isReceipt = envelope.isReceipt();
+                if (isReceipt) {
+                    // TODO: display receipts as system-messages
+                } else {
+                    if (content.getDataMessage().isPresent()) {
+                        SignalServiceDataMessage dataMessage = content.getDataMessage().get();
+                        timestamp = dataMessage.getTimestamp();
+                        if (dataMessage.getGroupContext().isPresent()) {
+                            // TODO: support groups
+                        }
+                        if (dataMessage.getBody().isPresent()) {
+                            String message = dataMessage.getBody().get();
+                            handleMessageNatively(this.connection, who, message, timestamp);
+                            // TODO: do not send receipt until handleMessageNatively returns successfully
+                        }
+                    }
+                }
             }
             // TODO: support other message types
         }
@@ -166,16 +162,16 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
     }
     
     int sendMessage(String who, String message) {
-    	if (this.manager != null) {
-			try {
-				this.manager.sendMessage(message, null, Arrays.asList(who)); // https://stackoverflow.com/questions/20358883/
-				return 1;
-			} catch (IOException | AttachmentInvalidException | EncapsulatedExceptions | InvalidNumberException e) {
-				e.printStackTrace();
-				handleErrorNatively(this.connection, "Exception while sending message: " + e.getMessage());
-			}
-    	}
-    	return 0;
+        if (this.manager != null) {
+            try {
+                this.manager.sendMessage(message, null, Arrays.asList(who)); // https://stackoverflow.com/questions/20358883/
+                return 1;
+            } catch (IOException | AttachmentInvalidException | EncapsulatedExceptions | InvalidNumberException e) {
+                e.printStackTrace();
+                handleErrorNatively(this.connection, "Exception while sending message: " + e.getMessage());
+            }
+        }
+        return 0;
     }
 
     static {
