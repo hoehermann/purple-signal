@@ -12,7 +12,6 @@ import org.asamk.signal.manager.AttachmentInvalidException;
 import org.asamk.signal.manager.Manager;
 import org.asamk.signal.manager.Manager.ReceiveMessageHandler;
 import org.asamk.signal.manager.ServiceConfig;
-import org.asamk.signal.storage.SignalAccount;
 import org.asamk.signal.util.SecurityProvider;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
@@ -56,41 +55,29 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
     private boolean keepReceiving;
 
     public PurpleSignal(long connection, String username) throws IOException {
-        //try {
-            this.connection = connection;
-            this.keepReceiving = false;
+        this.connection = connection;
+        this.keepReceiving = false;
 
-            // stolen from signald/src/main/java/io/finn/signald/Main.java
-            // Workaround for BKS truststore
-            Security.insertProviderAt(new SecurityProvider(), 1);
-            Security.addProvider(new BouncyCastleProvider());
+        // stolen from signald/src/main/java/io/finn/signald/Main.java
+        // Workaround for BKS truststore
+        Security.insertProviderAt(new SecurityProvider(), 1);
+        Security.addProvider(new BouncyCastleProvider());
 
-            String settingsPath = getDefaultDataPath();
-            logNatively(DEBUG_LEVEL_INFO, "Using settings path " + settingsPath);
-            final SignalServiceConfiguration serviceConfiguration = ServiceConfig.createDefaultServiceConfiguration("purple-signal");
-            //try {
-                this.manager = Manager.init(username, settingsPath, serviceConfiguration, "purple-signal");
-                if (this.manager.isRegistered()) {
-                    logNatively(DEBUG_LEVEL_INFO, "Using registered user " + manager.getUsername());
-                } else {
-                	throw new IllegalStateException("User not registered.");
-                	//handleErrorNatively(this.connection, "User not registered.");
-                }
-            //} catch (Exception e) {
-            //    handleErrorNatively(this.connection, "Error loading state file: " + e.getMessage());
-            //}
-        /*} catch (Throwable t) {
-            t.printStackTrace();
-            throw t;
-        }*/
+        String settingsPath = getDefaultDataPath();
+        logNatively(DEBUG_LEVEL_INFO, "Using settings path " + settingsPath);
+        final SignalServiceConfiguration serviceConfiguration = ServiceConfig.createDefaultServiceConfiguration("purple-signal");
+        this.manager = Manager.init(username, settingsPath, serviceConfiguration, "purple-signal");
+        if (this.manager.isRegistered()) {
+            logNatively(DEBUG_LEVEL_INFO, "Using registered user " + manager.getUsername());
+        } else {
+        	throw new IllegalStateException("User not registered.");
+        }
     }
 
     public void run() {
-        logNatively(DEBUG_LEVEL_INFO, "STARTING TO RECEIVE");
         boolean returnOnTimeout = true; // it looks like setting this to false means "listen for new messages forever".
         // There seems to be a non-daemon thread to be involved somewhere as the Java VM
         // will not ever shut down.
-        // TODO: Gain access to private MessagePipe, close it for immediate shutdown?
         long timeout = 60; // Seconds to wait for an incoming message. After the timeout occurred, a re-connect happens silently.
         // TODO: Find out how this affects what.
         boolean ignoreAttachments = true;
@@ -175,7 +162,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
     }
 
     static {
-        System.loadLibrary("purple-signal");
+        System.loadLibrary("purple-signal"); // will implicitly look for libpurple-signal.so on Linux and purple-signal.dll on Windows
     }
 
     final int DEBUG_LEVEL_INFO = 1; // from libpurple/debug.h

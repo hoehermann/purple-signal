@@ -151,9 +151,10 @@ signal_login(PurpleAccount *account)
     sa->pc = pc;
 
     purple_connection_set_state(pc, PURPLE_CONNECTION_CONNECTING);
-    const char *error = purplesignal_login(signaljvm, &sa->ps, (uintptr_t)pc, purple_account_get_username(account));
+    char *error = purplesignal_login(signaljvm, &sa->ps, (uintptr_t)pc, purple_account_get_username(account));
     if (error) {
         purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, error);
+        g_free(error);
     } else {
         purple_connection_set_state(pc, PURPLE_CONNECTION_CONNECTED);
     }

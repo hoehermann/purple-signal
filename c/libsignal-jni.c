@@ -102,7 +102,7 @@ char *readdir_of_jars(const char *path, const char *prefix) {
 
 char *purplesignal_init(const char *signal_cli_path, SignalJVM *sjvm) {
     if (sjvm->vm != NULL && sjvm->env != NULL) {
-        signal_debug_async(PURPLE_DEBUG_INFO, "jni pointers not null. JVM seems to be initialized already.\n");
+        signal_debug_async(PURPLE_DEBUG_INFO, "jni pointers not null. JVM seems to be initialized already.");
         return NULL;
     } else {
         char *ownpath = find_own_path();
@@ -147,45 +147,46 @@ void purplesignal_destroy(SignalJVM *sjvm) {
     sjvm->env = NULL;
 }
 
-const char *purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, uintptr_t connection, const char* username) {
-    signal_debug_async(PURPLE_DEBUG_INFO, "Looking up class…");
+char * get_exception_message(JNIEnv *env, const char * fallback_message) {
+    if ((*env)->ExceptionCheck(env)) {
+        jthrowable jexception;
+        jexception = (*env)->ExceptionOccurred(env);
+        jboolean isCopy = 0;
+        jclass jcls = (*env)->FindClass(env, "java/lang/Object");
+        jmethodID toString = (*env)->GetMethodID(env, jcls, "toString", "()Ljava/lang/String;");
+        jstring jstr = (*env)->CallObjectMethod(env, jexception, toString);
+        const char * utf = (*env)->GetStringUTFChars(env, jstr, &isCopy);
+        char * errmsg = g_strdup(utf);
+        (*env)->ReleaseStringUTFChars(env, jstr, utf);
+        return errmsg;
+    } else {
+        return g_strdup(fallback_message);
+    }
+}
+
+char *purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, uintptr_t connection, const char* username) {
     ps->class = (*sjvm.env)->FindClass(sjvm.env, "de/hehoe/purple_signal/PurpleSignal");
     if (ps->class == NULL) {
-        (*sjvm.env)->ExceptionDescribe(sjvm.env);
-        return "Failed to find PurpleSignal class (more information might be printed to the command-line).";
+        return get_exception_message(sjvm.env, "Failed to find PurpleSignal class.");
     }
-    signal_debug_async(PURPLE_DEBUG_INFO, "Looking up constructor…");
     jmethodID constructor = (*sjvm.env)->GetMethodID(sjvm.env, ps->class, "<init>", "(JLjava/lang/String;)V");
     if (constructor == NULL) {
-        return "Failed to find PurpleSignal constructor.";
+        return g_strdup("Failed to find PurpleSignal constructor.");
     }
+    // TODO: find out if jstrings need to be destroyed after usage
+    // https://stackoverflow.com/questions/6238785/newstringutf-and-freeing-memory
     jstring jusername = (*sjvm.env)->NewStringUTF(sjvm.env, username);
     if (jusername == NULL) {
-        return "NewStringUTF failed.";
+        return g_strdup("NewStringUTF failed.");
     }
-    printf("username: %s\n", username);
-    printf("jusername: %p\n", &jusername);
-    // TODO: find out if jstrings need to be destroyed after usage
-    signal_debug_async(PURPLE_DEBUG_INFO, "Creating new instance…");
     jlong jconnection = connection;
     ps->instance = (*sjvm.env)->NewObject(sjvm.env, ps->class, constructor, jconnection, jusername);
     if (ps->instance == NULL) {
-        //return "Failed to create an instance of PurpleSignal.";
-        jthrowable jexception;
-        jexception = (*sjvm.env)->ExceptionOccurred(sjvm.env);
-        jboolean isCopy = 0;
-        jclass jcls = (*sjvm.env)->FindClass(sjvm.env, "java/lang/Object");
-        jmethodID toString = (*sjvm.env)->GetMethodID(sjvm.env, jcls, "toString", "()Ljava/lang/String;");
-        jstring jstr = (*sjvm.env)->CallObjectMethod(sjvm.env, jexception, toString);
-        const char * utf = (*sjvm.env)->GetStringUTFChars(sjvm.env, jstr, &isCopy);
-        char * errmsg = g_strdup(utf);
-        (*sjvm.env)->ReleaseStringUTFChars(sjvm.env, jstr, utf);
-        return errmsg;
+        return get_exception_message(sjvm.env, "Failed to create PurpleSignal instance.");
     }
-    signal_debug_async(PURPLE_DEBUG_INFO, "Looking up method…");
     jmethodID method = (*sjvm.env)->GetMethodID(sjvm.env, ps->class, "startReceiving", "()V");
     if (method == NULL) {
-        return "Failed to find method startReceiving.";
+        return g_strdup("Failed to find method startReceiving.");
     }
     signal_debug_async(PURPLE_DEBUG_INFO, "Starting background thread…");
     (*sjvm.env)->CallVoidMethod(sjvm.env, ps->instance, method);
@@ -194,12 +195,12 @@ const char *purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, uintptr_t conne
 
 int purplesignal_close(SignalJVM sjvm, PurpleSignal *ps) {
     if (sjvm.vm == NULL || sjvm.env == NULL || ps->class == NULL || ps->instance == NULL) {
-        signal_debug_async(PURPLE_DEBUG_INFO, "Pointer already NULL during purplesignal_close(). Assuming no connection ever made.\n");
+        signal_debug_async(PURPLE_DEBUG_INFO, "Pointer already NULL during purplesignal_close(). Assuming no connection ever made.");
         return 1;
     }
     jmethodID method = (*sjvm.env)->GetMethodID(sjvm.env, ps->class, "stopReceiving", "()V");
     if (method == NULL) {
-        signal_debug_async(PURPLE_DEBUG_ERROR, "Failed to find method stopReceiving.\n");
+        signal_debug_async(PURPLE_DEBUG_ERROR, "Failed to find method stopReceiving.");
         return 0;
     }
     (*sjvm.env)->CallVoidMethod(sjvm.env, ps->instance, method);
