@@ -16,10 +16,12 @@ import org.asamk.signal.util.SecurityProvider;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
 import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
+import org.whispersystems.util.Base64;
 import org.asamk.signal.util.IOUtils;
 
 public class PurpleSignal implements ReceiveMessageHandler, Runnable {
@@ -70,7 +72,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
         if (this.manager.isRegistered()) {
             logNatively(DEBUG_LEVEL_INFO, "Using registered user " + manager.getUsername());
         } else {
-        	throw new IllegalStateException("User not registered.");
+        	throw new IllegalStateException("User not registered. Please register and verify using signal-cli.");
         }
     }
 
@@ -116,30 +118,26 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
     public void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, Throwable exception) {
         logNatively(DEBUG_LEVEL_INFO, "RECEIVED SOMETHING!");
         // stolen from signald/src/main/java/io/finn/signald/MessageReceiver.java and
-        // signal-cli/src/main/java/org/asamk/signal/JsonMessageEnvelope.java
+        // signal-cli/src/main/java/org/asamk/signal/JsonMessageEnvelope.java and
+        // signal-cli/src/main/java/org/asamk/signal/ReceiveMessageHandler.java
         if (exception != null) {
             handleErrorNatively(this.connection, "Exception while handling message: " + exception.getMessage());
-        }
-        if (envelope != null && content != null) {
+        } else if (envelope == null) {
+        	handleErrorNatively(this.connection, "Handling null envelope."); // this should never happen
+        } else {
             SignalServiceAddress source = envelope.getSourceAddress();
             String who = source.getNumber().orNull();
-            if (who != null) {
-                long timestamp = envelope.getTimestamp();
+            if (who == null) {
+            	logNatively(DEBUG_LEVEL_INFO, "Source is null – ignoring message.");
+            } else if (content == null) {
+                handleErrorNatively(this.connection, "Failed to decrypt incoming message.");
+            } else {
                 boolean isReceipt = envelope.isReceipt();
                 if (isReceipt) {
                     // TODO: display receipts as system-messages
                 } else {
                     if (content.getDataMessage().isPresent()) {
-                        SignalServiceDataMessage dataMessage = content.getDataMessage().get();
-                        timestamp = dataMessage.getTimestamp();
-                        if (dataMessage.getGroupContext().isPresent()) {
-                            // TODO: support groups
-                        }
-                        if (dataMessage.getBody().isPresent()) {
-                            String message = dataMessage.getBody().get();
-                            handleMessageNatively(this.connection, who, message, timestamp);
-                            // TODO: do not send receipt until handleMessageNatively returns successfully
-                        }
+                        handleDataMessage(content, who);
                     }
                 }
             }
@@ -147,6 +145,20 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
         }
 
     }
+
+	private void handleDataMessage(SignalServiceContent content, String who) {
+		SignalServiceDataMessage dataMessage = content.getDataMessage().get();
+		if (dataMessage.getGroupContext().isPresent() && dataMessage.getGroupContext().get().getGroupV1().isPresent()) {
+			SignalServiceGroup groupInfo = dataMessage.getGroupContext().get().getGroupV1().get();
+			who = Base64.encodeBytes(groupInfo.getGroupId());
+		}
+		long timestamp = dataMessage.getTimestamp();
+		if (dataMessage.getBody().isPresent()) {
+		    String message = dataMessage.getBody().get();
+		    handleMessageNatively(this.connection, who, message, timestamp);
+		    // TODO: do not send receipt until handleMessageNatively returns successfully
+		}
+	}
     
     int sendMessage(String who, String message) {
         if (this.manager != null) {
