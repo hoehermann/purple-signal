@@ -49,6 +49,8 @@
 
 #define SIGNAL_OPTION_LIBDIR "signal-cli-lib-dir"
 #define SIGNAL_DEFAULT_LIBDIR "/opt/signal-cli/lib"
+#define SIGNAL_OPTION_SETTINGS_DIR "signal-cli-settings-dir"
+#define SIGNAL_DEFAULT_SETTINGS_DIR ""
 
 /*
  * Holds all information related to this account (connection) instance.
@@ -145,8 +147,15 @@ signal_login(PurpleAccount *account)
     sa->account = account;
     sa->pc = pc;
 
+    const char * settings_dir_format = purple_account_get_string(account, SIGNAL_OPTION_SETTINGS_DIR, SIGNAL_DEFAULT_SETTINGS_DIR);
+    char * settings_dir = g_strdup_printf(settings_dir_format, purple_user_dir());
     purple_connection_set_state(pc, PURPLE_CONNECTION_CONNECTING);
-    char *error = purplesignal_login(signaljvm, &sa->ps, (uintptr_t)pc, purple_account_get_username(account));
+    char *error = purplesignal_login(
+        signaljvm, &sa->ps, (uintptr_t)pc, 
+        purple_account_get_username(account),
+        settings_dir
+    );
+    g_free(settings_dir);
     if (error) {
         purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, error);
         g_free(error);
@@ -203,6 +212,13 @@ signal_add_account_options(GList *account_options)
                 _("signal-cli's lib directory (containing .jar files)"),
                 SIGNAL_OPTION_LIBDIR,
                 SIGNAL_DEFAULT_LIBDIR
+                );
+    account_options = g_list_append(account_options, option);
+    
+    option = purple_account_option_string_new(
+                _("signal-cli's settings directory (%s can be used for the purple user dir, leave empty for default)"),
+                SIGNAL_OPTION_SETTINGS_DIR,
+                SIGNAL_DEFAULT_SETTINGS_DIR
                 );
     account_options = g_list_append(account_options, option);
     

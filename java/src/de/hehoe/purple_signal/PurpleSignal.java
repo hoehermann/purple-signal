@@ -42,17 +42,14 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
         if (new File(dataPath).exists()) {
             return dataPath;
         }
-
         String legacySettingsPath = System.getProperty("user.home") + "/.config/signal";
         if (new File(legacySettingsPath).exists()) {
             return legacySettingsPath;
         }
-
         legacySettingsPath = System.getProperty("user.home") + "/.config/textsecure";
         if (new File(legacySettingsPath).exists()) {
             return legacySettingsPath;
         }
-
         return dataPath;
     }
 
@@ -60,7 +57,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
     private long connection;
     private boolean keepReceiving;
 
-    public PurpleSignal(long connection, String username) throws IOException {
+    public PurpleSignal(long connection, String username, String settingsDir) throws IOException {
         this.connection = connection;
         this.keepReceiving = false;
 
@@ -68,8 +65,11 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
         // Workaround for BKS truststore
         Security.insertProviderAt(new SecurityProvider(), 1);
         Security.addProvider(new BouncyCastleProvider());
-
+        
         String settingsPath = getDefaultDataPath();
+        if (!settingsDir.isEmpty()) {
+        	settingsPath = settingsDir;
+        }
         logNatively(DEBUG_LEVEL_INFO, "Using settings path " + settingsPath);
         final SignalServiceConfiguration serviceConfiguration = ServiceConfig.createDefaultServiceConfiguration("purple-signal");
         this.manager = Manager.init(username, settingsPath, serviceConfiguration, "purple-signal");
@@ -92,9 +92,10 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
                 this.manager.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout,
                     ignoreAttachments, this);
             }
-        } catch (IOException e) {
-            handleErrorNatively(this.connection, "Exception while waiting for or receiving message: " + e.getMessage());
-        } // TODO: null pointer exception can occur if user is not registered at all
+        } catch (Throwable t) {
+            handleErrorNatively(this.connection, "Exception while waiting for or receiving message: " + t.getMessage());
+            t.printStackTrace();
+        }
         logNatively(DEBUG_LEVEL_INFO, "RECEIVING DONE");
     }
 

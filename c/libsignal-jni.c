@@ -164,12 +164,12 @@ char * get_exception_message(JNIEnv *env, const char * fallback_message) {
     }
 }
 
-char *purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, uintptr_t connection, const char* username) {
+char *purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, uintptr_t connection, const char* username, const char * settings_dir) {
     ps->class = (*sjvm.env)->FindClass(sjvm.env, "de/hehoe/purple_signal/PurpleSignal");
     if (ps->class == NULL) {
         return get_exception_message(sjvm.env, "Failed to find PurpleSignal class.");
     }
-    jmethodID constructor = (*sjvm.env)->GetMethodID(sjvm.env, ps->class, "<init>", "(JLjava/lang/String;)V");
+    jmethodID constructor = (*sjvm.env)->GetMethodID(sjvm.env, ps->class, "<init>", "(JLjava/lang/String;Ljava/lang/String;)V");
     if (constructor == NULL) {
         return g_strdup("Failed to find PurpleSignal constructor.");
     }
@@ -179,8 +179,12 @@ char *purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, uintptr_t connection,
     if (jusername == NULL) {
         return g_strdup("NewStringUTF failed.");
     }
+    jstring jsettings_dir = (*sjvm.env)->NewStringUTF(sjvm.env, settings_dir);
+    if (jsettings_dir == NULL) {
+        return g_strdup("NewStringUTF failed.");
+    }
     jlong jconnection = connection;
-    ps->instance = (*sjvm.env)->NewObject(sjvm.env, ps->class, constructor, jconnection, jusername);
+    ps->instance = (*sjvm.env)->NewObject(sjvm.env, ps->class, constructor, jconnection, jusername, jsettings_dir);
     if (ps->instance == NULL) {
         return get_exception_message(sjvm.env, "Failed to create PurpleSignal instance.");
     }
@@ -246,12 +250,4 @@ int purplesignal_send(SignalJVM sjvm, PurpleSignal *ps, uintptr_t pc, const char
     jstring jmessage = (*sjvm.env)->NewStringUTF(sjvm.env, message);
     jint ret = (*sjvm.env)->CallIntMethod(sjvm.env, ps->instance, method, jwho, jmessage);
     return ret;
-}
-
-int main(int argc, char **argv) {
-    const char* username = argv[1];
-    SignalJVM sjvm = {0};
-    printf("purplesignal_init: %s\n", purplesignal_init(".", &sjvm));
-    PurpleSignal ps;
-    printf("purplesignal_login: %s\n", purplesignal_login(sjvm, &ps, 0, username));
 }
