@@ -297,6 +297,26 @@ static PurplePluginInfo info = {
 
 PURPLE_INIT_PLUGIN(signal, plugin_init, info);
 
+gboolean
+signal_check_connection_existance(PurpleConnection *pc) {
+    int connection_exists = 0;
+    {
+        GList * connection = purple_connections_get_connecting();
+        while (connection != NULL && connection_exists == 0) {
+            connection_exists = connection->data == pc;
+            connection = connection->next;
+        }
+    }
+    {
+        GList * connection = purple_connections_get_all();
+        while (connection != NULL && connection_exists == 0) {
+            connection_exists = connection->data == pc;
+            connection = connection->next;
+        }
+    }
+    return connection_exists;
+}
+
 /*
  * Handler for a message. Called inside of the GTK eventloop.
  *
@@ -305,13 +325,20 @@ PURPLE_INIT_PLUGIN(signal, plugin_init, info);
 gboolean
 signal_handle_message_mainthread(gpointer data)
 {
-    purple_debug_info(
-        "signal", "signal_handle_message_mainthread was called!\n"
-    );
     PurpleSignalMessage *psm = (PurpleSignalMessage *)data;
-    purple_debug_info("signal", "%p %s %ld %s %d\n", (void *)psm->pc, psm->who, psm->timestamp, psm->message, psm->error);
     PurpleConnection *pc = (PurpleConnection *)psm->pc;
-    signal_process_message(pc, psm);
+    int connection_exists = signal_check_connection_existance(pc);
+    if (connection_exists != 0) {
+        purple_debug_info(
+            "signal", "%p %s %ld %s %d\n", 
+            (void *)psm->pc, psm->who, psm->timestamp, psm->message, psm->error
+        );
+        signal_process_message(pc, psm);
+    } else {
+        purple_debug_info(
+            "signal", "Not handling message for not-existant connection %p.\n", pc
+        );
+    }
     g_free((char *)psm->who);
     g_free((char *)psm->message);
     g_free(psm);
