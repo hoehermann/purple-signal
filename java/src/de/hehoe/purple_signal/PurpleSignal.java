@@ -7,15 +7,20 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.asamk.signal.manager.AttachmentInvalidException;
 import org.asamk.signal.manager.GroupNotFoundException;
 import org.asamk.signal.manager.Manager;
 import org.asamk.signal.manager.Manager.ReceiveMessageHandler;
 import org.asamk.signal.manager.NotAGroupMemberException;
+import org.asamk.signal.manager.ProvisioningManager;
 import org.asamk.signal.manager.ServiceConfig;
+import org.asamk.signal.manager.UserAlreadyExists;
+import org.asamk.signal.storage.SignalAccount;
 import org.asamk.signal.util.SecurityProvider;
 import org.asamk.signal.util.Util;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
@@ -54,10 +59,14 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
     }
 
     private Manager manager;
+    private ProvisioningManager provisioningManager = null;
     private long connection;
     private boolean keepReceiving;
 
-    public PurpleSignal(long connection, String username, String settingsDir) throws IOException {
+    public PurpleSignal(long connection, String username, String settingsDir) throws IOException, TimeoutException, InvalidKeyException, UserAlreadyExists {
+        final String USER_AGENT = "purple-signal";
+        final SignalServiceConfiguration serviceConfiguration = ServiceConfig.createDefaultServiceConfiguration(USER_AGENT);
+
         this.connection = connection;
         this.keepReceiving = false;
 
@@ -71,31 +80,51 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
         	settingsPath = settingsDir;
         }
         logNatively(DEBUG_LEVEL_INFO, "Using settings path " + settingsPath);
-        final SignalServiceConfiguration serviceConfiguration = ServiceConfig.createDefaultServiceConfiguration("purple-signal");
-        this.manager = Manager.init(username, settingsPath, serviceConfiguration, "purple-signal");
-        if (this.manager.isRegistered()) {
+        String dataPath = settingsPath + "/data";
+        if (SignalAccount.userExists(dataPath, username)) {
+        	this.manager = Manager.init(username, settingsPath, serviceConfiguration, USER_AGENT);
+            if (!this.manager.isRegistered()) {
+            	throw new IllegalStateException("User is not registered but exists at "+dataPath+". Either link successfully or register and verify with signal-cli.");
+            }
+        	this.manager.checkAccountState();
             logNatively(DEBUG_LEVEL_INFO, "Using registered user " + manager.getUsername());
         } else {
-        	throw new IllegalStateException("User not registered. Please register and verify using signal-cli.");
+            logNatively(DEBUG_LEVEL_INFO, "User does not exist. Asking to link…");
+            this.provisioningManager = new ProvisioningManager(settingsPath, serviceConfiguration, USER_AGENT);
+            final String deviceLinkUri = this.provisioningManager.getDeviceLinkUri();
+            handleMessageNatively(this.connection, "link", "Please use this code to link this Pidgin account (use a QR encoder for linking with real phones):<br/>"+deviceLinkUri, 0);
         }
     }
 
     public void run() {
-        boolean returnOnTimeout = true; // it looks like setting this to false means "listen for new messages forever".
-        // There seems to be a non-daemon thread to be involved somewhere as the Java VM
-        // will not ever shut down.
-        long timeout = 60; // Seconds to wait for an incoming message. After the timeout occurred, a re-connect happens silently.
-        // TODO: Find out how this affects what.
-        boolean ignoreAttachments = true;
-        try {
-            while (this.keepReceiving) {
-                this.manager.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout,
-                    ignoreAttachments, this);
-            }
-        } catch (Throwable t) {
-            handleErrorNatively(this.connection, "Exception while waiting for or receiving message: " + t.getMessage());
-            t.printStackTrace();
-        }
+    	if (this.provisioningManager != null) {
+            String linkedUsername = null;
+			try {
+				linkedUsername = this.provisioningManager.finishDeviceLink("purple-signal");
+			} catch (IOException | InvalidKeyException | TimeoutException | UserAlreadyExists e) {
+				handleErrorNatively(this.connection, "Unable to finish device link: " + e.getMessage());
+				e.printStackTrace();
+			}
+			handleErrorNatively(this.connection, "Reconnect needed.");
+    	} else {
+            boolean ignoreAttachments = true;
+	        boolean returnOnTimeout = true; // it looks like setting this to false means "listen for new messages forever".
+	        // There seems to be a non-daemon thread to be involved somewhere as the Java VM
+	        // will not ever shut down.
+	        long timeout = 60; // Seconds to wait for an incoming message. After the timeout occurred, a re-connect happens silently.
+	        // TODO: Find out how this affects what.
+	        try {
+	            while (this.keepReceiving) {
+	                this.manager.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout,
+	                    ignoreAttachments, this);
+	            }
+	        } catch (Exception e) {
+	            handleErrorNatively(this.connection, "Exception while waiting for or receiving message: " + e.getMessage());
+	        } catch (Throwable t) {
+	            handleErrorNatively(this.connection, "Exception while waiting for or receiving message.");
+	            t.printStackTrace();
+	        }
+    	}
         logNatively(DEBUG_LEVEL_INFO, "RECEIVING DONE");
     }
 
