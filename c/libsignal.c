@@ -48,7 +48,7 @@
 #define SIGNAL_STATUS_STR_MOBILE   "mobile"
 
 #define SIGNAL_OPTION_LIBDIR "signal-cli-lib-dir"
-#define SIGNAL_DEFAULT_LIBDIR "/opt/signal-cli/lib"
+#define SIGNAL_DEFAULT_LIBDIR ""
 #define SIGNAL_OPTION_SETTINGS_DIR "signal-cli-settings-dir"
 #define SIGNAL_DEFAULT_SETTINGS_DIR ""
 
@@ -118,6 +118,14 @@ signal_login(PurpleAccount *account)
     PurpleConnection *pc = purple_account_get_connection(account);
 
     const char *libdir = purple_account_get_string(account, SIGNAL_OPTION_LIBDIR, SIGNAL_DEFAULT_LIBDIR);
+    if (!libdir[0]) {
+        purple_connection_error(
+            pc, 
+            PURPLE_CONNECTION_ERROR_OTHER_ERROR, 
+            _("Path to signal-cli's lib directory is empty. Set it appropriately (e.g. /opt/signal-cli/lib).")
+        );
+        return;
+    }
     char *errormsg = purplesignal_init(libdir, &signaljvm);
     if (errormsg) {
         purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, errormsg);
