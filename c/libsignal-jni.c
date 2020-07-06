@@ -114,17 +114,22 @@ char *purplesignal_init(const char *signal_cli_path, SignalJVM *sjvm) {
         char *librarypath = g_strdup_printf("-Djava.library.path=%s", ownpath);
         g_free(ownpath);
         signal_debug_async(PURPLE_DEBUG_INFO, classpath);
+        signal_debug_async(PURPLE_DEBUG_INFO, librarypath);
         if (classpath[0] != '-') {
+            // if classpath does not start with a minus, it contains an error message
             g_free(librarypath);
             return classpath;
         }
 
         JavaVMInitArgs vm_args;
-        const unsigned int nOptions = 2;
+        const unsigned int nOptions = 3;
         JavaVMOption options[nOptions];
         options[0].optionString = classpath;
         options[1].optionString = librarypath;
-        //options[2].optionString = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=10044"; // TODO: conditionally enable this only in debug builds. Or if Pidgin was started in debug mode?
+        options[2].optionString = "";
+        if (purple_debug_is_enabled()) {
+            options[2].optionString = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=10044"; 
+        }
         vm_args.options = options;
         vm_args.nOptions = nOptions;
         vm_args.version  = JNI_VERSION_1_8;
