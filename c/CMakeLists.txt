@@ -80,12 +80,12 @@ endif()
 file(STRINGS "../VERSION" SIGNAL_PLUGIN_VERSION)
 message(STATUS "SIGNAL_PLUGIN_VERSION ${SIGNAL_PLUGIN_VERSION}")
 
-# remove automatic prefix "lib" from build target name
-SET_TARGET_PROPERTIES(${TARGET_NAME} PROPERTIES PREFIX "")
-
 target_compile_definitions(${TARGET_NAME} PUBLIC SIGNAL_PLUGIN_VERSION="${SIGNAL_PLUGIN_VERSION}" OWN_FILE_NAME="${TARGET_NAME}.dll")
 
 if (MINGW)
+    # remove automatic prefix "lib" from build target name
+    SET_TARGET_PROPERTIES(${TARGET_NAME} PROPERTIES PREFIX "")
+
     # TODO: find out why I thought this was necessary
     set_target_properties (${TARGET_NAME} PROPERTIES
         LINK_FLAGS "-Wl,--add-stdcall-alias"
