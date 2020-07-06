@@ -5,23 +5,6 @@
 #include <glib.h>
 #include <assert.h>
 
-/**
- * Debug levels.
- *
- * from libpurple/debug.h
- * I do not want this module to depend on purple directly, though.
- */
-typedef enum
-{
-	PURPLE_DEBUG_ALL = 0,  /**< All debug levels.              */
-	PURPLE_DEBUG_MISC,     /**< General chatter.               */
-	PURPLE_DEBUG_INFO,     /**< General operation Information. */
-	PURPLE_DEBUG_WARNING,  /**< Warnings.                      */
-	PURPLE_DEBUG_ERROR,    /**< Errors.                        */
-	PURPLE_DEBUG_FATAL     /**< Fatal errors.                  */
-
-} PurpleDebugLevel;
-
 #include <libgen.h>
 #if defined(__MINGW32__) || defined(_WIN32)
 #define CLASSPATH_SEPARATOR ';'
@@ -216,7 +199,7 @@ int purplesignal_close(SignalJVM sjvm, PurpleSignal *ps) {
     return 1;
 }
 
-JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNatively(JNIEnv *env, jclass cls, jlong pc, jstring jwho, jstring jmessage, jlong timestamp) {
+JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNatively(JNIEnv *env, jclass cls, jlong pc, jstring jwho, jstring jmessage, jlong timestamp, jint flags) {
     const char *who = (*env)->GetStringUTFChars(env, jwho, 0);
     const char *message = (*env)->GetStringUTFChars(env, jmessage, 0);
     PurpleSignalMessage *psm = g_malloc0(sizeof(PurpleSignalMessage));
@@ -224,6 +207,7 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNa
     psm->who = g_strdup(who);
     psm->message = g_strdup(message);
     psm->timestamp = timestamp;
+    psm->flags = flags;
     (*env)->ReleaseStringUTFChars(env, jmessage, message);
     (*env)->ReleaseStringUTFChars(env, jwho, who);
     signal_handle_message_async(psm);

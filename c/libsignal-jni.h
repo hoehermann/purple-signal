@@ -1,5 +1,6 @@
 #include <jni.h>
 #include <stdint.h>
+#include <purple.h>
 
 typedef struct {
     JavaVM *vm;
@@ -16,6 +17,7 @@ typedef struct {
     const char *who;
     const char *message;
     signed long timestamp;
+    PurpleMessageFlags flags;
     int error;
 } PurpleSignalMessage;
 

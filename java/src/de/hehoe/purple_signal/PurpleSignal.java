@@ -25,6 +25,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
+import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
 import org.whispersystems.signalservice.api.util.InvalidNumberException;
@@ -94,7 +95,13 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
             logNatively(DEBUG_LEVEL_INFO, "User does not exist. Asking to link…");
             this.provisioningManager = new ProvisioningManager(settingsPath, serviceConfiguration, USER_AGENT);
             final String deviceLinkUri = this.provisioningManager.getDeviceLinkUri();
-            handleMessageNatively(this.connection, "link", "Please use this code to link this Pidgin account (use a QR encoder for linking with real phones):<br/>"+deviceLinkUri, 0);
+            handleMessageNatively(
+        		this.connection, 
+        		"link",
+        		"Please use this code to link this Pidgin account (use a QR encoder for linking with real phones):<br/>"+deviceLinkUri,
+        		0,
+        		PURPLE_MESSAGE_NICK
+            );
         }
     }
 
@@ -124,13 +131,18 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	        // TODO: Find out how this affects what.
 	        try {
 	            while (this.keepReceiving) {
-	                this.manager.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout,
-	                    ignoreAttachments, this);
+	                this.manager.receiveMessages(
+                		(long) (timeout * 1000), 
+                		TimeUnit.MILLISECONDS, 
+                		returnOnTimeout,
+	                    ignoreAttachments, 
+	                    this
+	                );
 	            }
 	        } catch (Exception e) {
-	            handleErrorNatively(this.connection, "Exception while waiting for or receiving message: " + e.getMessage());
+	            handleErrorNatively(this.connection, "Exception while waiting for message: " + e.getMessage());
 	        } catch (Throwable t) {
-	            handleErrorNatively(this.connection, "Exception while waiting for or receiving message.");
+	            handleErrorNatively(this.connection, "Unhandled exception while waiting for message.");
 	            t.printStackTrace();
 	        }
     	}
@@ -168,27 +180,50 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
         } else if (envelope == null) {
         	handleErrorNatively(this.connection, "Handling null envelope."); // this should never happen
         } else {
+        	long timestamp = envelope.getTimestamp();
             SignalServiceAddress source = envelope.getSourceAddress();
             String who = source.getNumber().orNull();
             if (who == null) {
-            	logNatively(DEBUG_LEVEL_INFO, "Source is null – ignoring message.");
+            	logNatively(DEBUG_LEVEL_INFO, "Source is null. Ignoring message.");
             } else if (content == null) {
-            	logNatively(DEBUG_LEVEL_INFO, "Failed to decrypt incoming message – ignoring.");
+            	logNatively(DEBUG_LEVEL_INFO, "Failed to decrypt incoming message. Ignoring message.");
                 //handleErrorNatively(this.connection, "Failed to decrypt incoming message.");
             } else {
-                boolean isReceipt = envelope.isReceipt();
-                if (isReceipt) {
-                    // TODO: display receipts as system-messages
+                if (content.getDataMessage().isPresent()) {
+                    handleDataMessage(content, who);
+                } else if (content.getSyncMessage().isPresent()) {
+                    handleSyncMessage(content, who);
+                } else if (content.getTypingMessage().isPresent()) {
+                	logNatively(DEBUG_LEVEL_INFO, "Received typing message for "+who+". Ignoring.");
+                } else if (content.getReceiptMessage().isPresent()) {
+					handleMessageNatively(this.connection, who, "[Message was displayed.]", timestamp, PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
                 } else {
-                    if (content.getDataMessage().isPresent()) {
-                        handleDataMessage(content, who);
-                    }
+                	handleMessageNatively(this.connection, who, "[Received message of unknown type.]", timestamp, PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
                 }
+                // TODO: support all message types
             }
-            // TODO: support other message types
         }
 
     }
+
+	private void handleSyncMessage(SignalServiceContent content, String who) {
+		SignalServiceSyncMessage syncMessage = content.getSyncMessage().get();
+		if (syncMessage.getSent().isPresent() && syncMessage.getSent().get().getMessage().getBody().isPresent()) {
+			who = syncMessage.getSent().get().getDestination().get().getNumber().get();
+			SignalServiceDataMessage dataMessage = syncMessage.getSent().get().getMessage();
+		    String message = dataMessage.getBody().get();
+			long timestamp = dataMessage.getTimestamp();
+		    handleMessageNatively(
+	    		this.connection, who, message, timestamp, 
+	    		PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_REMOTE_SEND | PURPLE_MESSAGE_DELAYED
+	    		// flags copied from EionRobb/purple-discord/blob/master/libdiscord.c
+	    	);
+		} else {
+		    handleMessageNatively(
+	    		this.connection, who, "[Received sync message without body.]", 0, PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG
+	    	);
+		}
+	}
 
 	private void handleDataMessage(SignalServiceContent content, String who) {
 		SignalServiceDataMessage dataMessage = content.getDataMessage().get();
@@ -196,11 +231,15 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			SignalServiceGroup groupInfo = dataMessage.getGroupContext().get().getGroupV1().get();
 			who = Base64.encodeBytes(groupInfo.getGroupId());
 		}
-		long timestamp = dataMessage.getTimestamp();
 		if (dataMessage.getBody().isPresent()) {
 		    String message = dataMessage.getBody().get();
-		    handleMessageNatively(this.connection, who, message, timestamp);
+			long timestamp = dataMessage.getTimestamp();
+		    handleMessageNatively(this.connection, who, message, timestamp, PURPLE_MESSAGE_RECV);
 		    // TODO: do not send receipt until handleMessageNatively returns successfully
+		} else {
+		    handleMessageNatively(
+	    		this.connection, who, "[Received data message without body.]", 0, PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG
+	    	);
 		}
 	}
     
@@ -226,8 +265,16 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
         System.loadLibrary("purple-signal"); // will implicitly look for libpurple-signal.so on Linux and purple-signal.dll on Windows
     }
 
+    final int PURPLE_MESSAGE_SEND = 0x0001;
+    final int PURPLE_MESSAGE_RECV = 0x0002;
+    final int PURPLE_MESSAGE_SYSTEM = 0x0004;
+    final int PURPLE_MESSAGE_NICK = 0x0020;
+    final int PURPLE_MESSAGE_NO_LOG = 0x0040;
+    final int PURPLE_MESSAGE_DELAYED = 0x0400;
+    final int PURPLE_MESSAGE_REMOTE_SEND = 0x10000;
+
     final int DEBUG_LEVEL_INFO = 1; // from libpurple/debug.h
     public static native void logNatively(int level, String text);
-    public static native void handleMessageNatively(long connection, String who, String content, long timestamp);
+    public static native void handleMessageNatively(long connection, String who, String content, long timestamp, int flags);
     public static native void handleErrorNatively(long connection, String error);
 }

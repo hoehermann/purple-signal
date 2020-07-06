@@ -86,17 +86,11 @@ void
 signal_display_message(PurpleConnection *pc, PurpleSignalMessage *psm)
 {
     SignalAccount *sa = purple_connection_get_protocol_data(pc);
-    PurpleMessageFlags flags = 0;
-    int fromMe = 0;
-    if (fromMe) {
-        // special handling of messages sent by self incoming from remote, addressing issue #32
-        // copied from EionRobb/purple-discord/blob/master/libdiscord.c
-        flags |= PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_REMOTE_SEND | PURPLE_MESSAGE_DELAYED;
+    if (psm->flags & PURPLE_MESSAGE_SEND) {
         PurpleConversation *conv = signal_find_conversation(psm->who, sa->account);
-        purple_conversation_write(conv, psm->who, psm->message, flags, psm->timestamp);
+        purple_conversation_write(conv, psm->who, psm->message, psm->flags, psm->timestamp);
     } else {
-        flags |= PURPLE_MESSAGE_RECV;
-        purple_serv_got_im(pc, psm->who, psm->message, flags, psm->timestamp);
+        purple_serv_got_im(pc, psm->who, psm->message, psm->flags, psm->timestamp);
     }
 }
 
