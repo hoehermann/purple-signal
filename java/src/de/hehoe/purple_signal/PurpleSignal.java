@@ -58,16 +58,18 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
         return dataPath;
     }
 
-    private Manager manager;
+    private Manager manager = null;
     private ProvisioningManager provisioningManager = null;
-    private long connection;
-    private boolean keepReceiving;
+    private long connection = 0;
+    private boolean keepReceiving = false;
+    private String username = null;
 
     public PurpleSignal(long connection, String username, String settingsDir) throws IOException, TimeoutException, InvalidKeyException, UserAlreadyExists {
         final String USER_AGENT = "purple-signal";
         final SignalServiceConfiguration serviceConfiguration = ServiceConfig.createDefaultServiceConfiguration(USER_AGENT);
 
         this.connection = connection;
+        this.username = username;
         this.keepReceiving = false;
 
         // stolen from signald/src/main/java/io/finn/signald/Main.java
@@ -81,8 +83,8 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
         }
         logNatively(DEBUG_LEVEL_INFO, "Using settings path " + settingsPath);
         String dataPath = settingsPath + "/data";
-        if (SignalAccount.userExists(dataPath, username)) {
-        	this.manager = Manager.init(username, settingsPath, serviceConfiguration, USER_AGENT);
+        if (SignalAccount.userExists(dataPath, this.username)) {
+        	this.manager = Manager.init(this.username, settingsPath, serviceConfiguration, USER_AGENT);
             if (!this.manager.isRegistered()) {
             	throw new IllegalStateException("User is not registered but exists at "+dataPath+". Either link successfully or register and verify with signal-cli.");
             }
@@ -105,7 +107,14 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 				handleErrorNatively(this.connection, "Unable to finish device link: " + e.getMessage());
 				e.printStackTrace();
 			}
-			handleErrorNatively(this.connection, "Reconnect needed.");
+			if (linkedUsername.equals(this.username)) {
+				handleErrorNatively(this.connection, String.format(
+							"Configured username %s does not match linked number %s.", 
+							this.username, linkedUsername
+				));
+			} else {
+				handleErrorNatively(this.connection, "Reconnect needed.");
+			}
     	} else {
             boolean ignoreAttachments = true;
 	        boolean returnOnTimeout = true; // it looks like setting this to false means "listen for new messages forever".
