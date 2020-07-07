@@ -86,12 +86,8 @@ void
 signal_display_message(PurpleConnection *pc, PurpleSignalMessage *psm)
 {
     SignalAccount *sa = purple_connection_get_protocol_data(pc);
-    if (psm->flags & PURPLE_MESSAGE_SEND) {
-        PurpleConversation *conv = signal_find_conversation(psm->who, sa->account);
-        purple_conversation_write(conv, psm->who, psm->message, psm->flags, psm->timestamp);
-    } else {
-        purple_serv_got_im(pc, psm->who, psm->message, psm->flags, psm->timestamp);
-    }
+    PurpleConversation *conv = signal_find_conversation(psm->chat, sa->account);
+    purple_conversation_write(conv, psm->sender, psm->message, psm->flags, psm->timestamp);
 }
 
 /*
@@ -102,14 +98,15 @@ signal_process_message(PurpleConnection *pc, PurpleSignalMessage *psm)
 {
     //SignalAccount *sa = purple_connection_get_protocol_data(pc);
     //PurpleAccount *account = purple_connection_get_account(pc);
-    if (psm->error) {
-        purple_debug(psm->error, "signal", "%s\n", psm->message);
-        purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, psm->message);
-    }
     if (!psm->timestamp) {
         psm->timestamp = time(NULL);
     }
-    signal_display_message(pc, psm);
+    if (psm->error) {
+        purple_debug(psm->error, "signal", "%s\n", psm->message);
+        purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, psm->message);
+    } else {
+        signal_display_message(pc, psm);
+    }
 }
 
 void
@@ -346,18 +343,15 @@ signal_handle_message_mainthread(gpointer data)
     PurpleSignalMessage *psm = (PurpleSignalMessage *)data;
     PurpleConnection *pc = (PurpleConnection *)psm->pc;
     int connection_exists = signal_check_connection_existance(pc);
-    if (connection_exists != 0) {
-        purple_debug_info(
-            "signal", "%p %s %ld %s %d\n", 
-            (void *)psm->pc, psm->who, psm->timestamp, psm->message, psm->error
-        );
-        signal_process_message(pc, psm);
-    } else {
+    if (connection_exists == 0) {
         purple_debug_info(
             "signal", "Not handling message for not-existant connection %p.\n", pc
         );
+    } else {
+        signal_process_message(pc, psm);
     }
-    g_free((char *)psm->who);
+    g_free((char *)psm->chat);
+    g_free((char *)psm->sender);
     g_free((char *)psm->message);
     g_free(psm);
     return FALSE;

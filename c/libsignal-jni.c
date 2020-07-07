@@ -199,17 +199,20 @@ int purplesignal_close(SignalJVM sjvm, PurpleSignal *ps) {
     return 1;
 }
 
-JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNatively(JNIEnv *env, jclass cls, jlong pc, jstring jwho, jstring jmessage, jlong timestamp, jint flags) {
-    const char *who = (*env)->GetStringUTFChars(env, jwho, 0);
+JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNatively(JNIEnv *env, jclass cls, jlong pc, jstring jchat, jstring jsender, jstring jmessage, jlong timestamp, jint flags) {
+    const char *chat = (*env)->GetStringUTFChars(env, jchat, 0);
+    const char *sender = (*env)->GetStringUTFChars(env, jsender, 0);
     const char *message = (*env)->GetStringUTFChars(env, jmessage, 0);
     PurpleSignalMessage *psm = g_malloc0(sizeof(PurpleSignalMessage));
     psm->pc = pc;
-    psm->who = g_strdup(who);
+    psm->chat = g_strdup(chat);
+    psm->sender = g_strdup(sender);
     psm->message = g_strdup(message);
     psm->timestamp = timestamp;
     psm->flags = flags;
     (*env)->ReleaseStringUTFChars(env, jmessage, message);
-    (*env)->ReleaseStringUTFChars(env, jwho, who);
+    (*env)->ReleaseStringUTFChars(env, jchat, chat);
+    (*env)->ReleaseStringUTFChars(env, jsender, sender);
     signal_handle_message_async(psm);
 }
 

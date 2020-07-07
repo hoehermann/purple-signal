@@ -14,7 +14,8 @@ typedef struct {
 
 typedef struct {
     uintptr_t pc;
-    const char *who;
+    const char *chat;
+    const char *sender;
     const char *message;
     signed long timestamp;
     PurpleMessageFlags flags;
