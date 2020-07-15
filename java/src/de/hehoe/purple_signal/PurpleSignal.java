@@ -6,6 +6,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -21,12 +22,18 @@ import org.asamk.signal.storage.SignalAccount;
 import org.asamk.signal.util.SecurityProvider;
 import org.asamk.signal.util.Util;
 import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
+import org.whispersystems.signalservice.api.messages.SignalServiceGroup.Type;
+import org.whispersystems.signalservice.api.messages.calls.SignalServiceCallMessage;
+import org.whispersystems.signalservice.api.messages.SignalServiceGroupContext;
+import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
 import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
@@ -181,14 +188,18 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
         } else if (envelope == null) {
         	handleErrorNatively(this.connection, "Handling null envelope."); // this should never happen
         } else {
-        	long timestamp = envelope.getTimestamp();
+        	printEnvelope(envelope);
             String source = envelope.getSourceAddress().getNumber().orNull();
             if (source == null) {
             	logNatively(DEBUG_LEVEL_INFO, "Source is null. Ignoring message.");
+            } else if (envelope.isReceipt()) {
+            	logNatively(DEBUG_LEVEL_INFO, "Ignoring receipt.");
             } else if (content == null) {
             	logNatively(DEBUG_LEVEL_INFO, "Failed to decrypt incoming message. Ignoring message.");
                 //handleErrorNatively(this.connection, "Failed to decrypt incoming message.");
             } else {
+            	long timestamp = envelope.getTimestamp();
+            	printSignalServiceContent(content);
                 if (content.getDataMessage().isPresent()) {
                     handleDataMessage(content, source);
                 } else if (content.getSyncMessage().isPresent()) {
@@ -196,7 +207,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
                 } else if (content.getTypingMessage().isPresent()) {
                 	logNatively(DEBUG_LEVEL_INFO, "Received typing message for "+source+". Ignoring.");
                 } else if (content.getReceiptMessage().isPresent()) {
-					handleMessageNatively(this.connection, source, source, "[Message was displayed.]", timestamp, PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
+					handleMessageNatively(this.connection, source, source, "[Message was received.]", timestamp, PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
                 } else {
                 	handleMessageNatively(this.connection, source, source, "[Received message of unknown type.]", timestamp, PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
                 }
@@ -205,6 +216,197 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
         }
 
     }
+
+	private void printEnvelope(SignalServiceEnvelope envelope) {
+		System.out.println(printPrefix+"SignalServiceEnvelope");
+		long serverTimestamp = envelope.getServerTimestamp();
+		System.out.println(printPrefix+"  ServerTimestamp: "+serverTimestamp);
+		if (envelope.hasSource()) {
+			SignalServiceAddress sourceAddress = envelope.getSourceAddress();
+			System.out.println(printPrefix+"  SourceAddress:");
+			if (sourceAddress.getNumber().isPresent()) {
+				String number = sourceAddress.getNumber().get();
+				System.out.println(printPrefix+"    Number: "+number);
+			}
+			//envelope.getSourceDevice();
+			//envelope.getSourceE164();
+			//envelope.getSourceIdentifier();
+			//envelope.getSourceUuid();
+		}
+		long timestamp = envelope.getTimestamp();
+		System.out.println(printPrefix+"  Timestamp: "+timestamp);
+		if (envelope.isPreKeySignalMessage()) {
+			System.out.println(printPrefix+"  isPreKeySignalMessage");
+		}
+		if (envelope.isReceipt()) {
+			System.out.println(printPrefix+"  isReceipt");
+		}
+		if (envelope.isSignalMessage()) {
+			System.out.println(printPrefix+"  isSignalMessage");
+		}
+		if (envelope.isUnidentifiedSender()) {
+			System.out.println(printPrefix+"  isUnidentifiedSender");
+		}
+	}
+	
+	final String printPrefix = "[signal] ";
+
+	private void printSignalServiceContent(SignalServiceContent content) {
+		System.out.println(printPrefix+"SignalServiceContent");
+		if (content.getCallMessage().isPresent()) {
+			SignalServiceCallMessage callMessage = content.getCallMessage().get();
+			System.out.println(printPrefix+"  CallMessage: "+callMessage.toString());
+		}
+		if (content.getDataMessage().isPresent()) {
+			SignalServiceDataMessage dataMessage = content.getDataMessage().get();
+			System.out.println(printPrefix+"  DataMessage");
+			if (dataMessage.getAttachments().isPresent()) {
+				List<SignalServiceAttachment> attachments = dataMessage.getAttachments().get();
+				System.out.println(printPrefix+"    Attachments.size(): "+attachments.size());
+			}
+			if (dataMessage.getBody().isPresent()) {
+				String body = dataMessage.getBody().get();
+				System.out.println(printPrefix+"    Body: \""+body+"\"");
+			}
+			if (dataMessage.getGroupContext().isPresent()) {
+				SignalServiceGroupContext groupContext = dataMessage.getGroupContext().get();
+				printGroupContext(groupContext, printPrefix+"    ");
+			}
+		}
+		if (content.getReceiptMessage().isPresent()) {
+			//SignalServiceReceiptMessage receiptMessage = content.getReceiptMessage().get();
+			System.out.println(printPrefix+"  ReceiptMessage: TODO");
+		}
+		long serverTimestamp = content.getServerTimestamp();
+		System.out.println(printPrefix+"  serverTimestamp: "+serverTimestamp);
+		if (content.getSyncMessage().isPresent()) {
+			System.out.println(printPrefix+"  SyncMessage");
+			SignalServiceSyncMessage syncMessage = content.getSyncMessage().get();
+			if (syncMessage.getBlockedList().isPresent()) {
+				System.out.println(printPrefix+"    BlockedList: TODO");
+			};
+			if (syncMessage.getConfiguration().isPresent()) {
+				System.out.println(printPrefix+"    Configuration: TODO");
+			};
+			if (syncMessage.getContacts().isPresent()) {
+				System.out.println(printPrefix+"    Contacts: TODO");
+			};
+			if (syncMessage.getFetchType().isPresent()) {
+				System.out.println(printPrefix+"    FetchType: TODO");
+			};
+			if (syncMessage.getGroups().isPresent()) {
+				System.out.println(printPrefix+"    Groups: TODO");
+			};
+			if (syncMessage.getKeys().isPresent()) {
+				System.out.println(printPrefix+"    Keys: TODO");
+			};
+			if (syncMessage.getMessageRequestResponse().isPresent()) {
+				System.out.println(printPrefix+"    MessageRequestResponse: TODO");
+			};
+			if (syncMessage.getRead().isPresent()) {
+				System.out.println(printPrefix+"    Read:");
+				List<ReadMessage> read = syncMessage.getRead().get();
+				read.forEach((readMessage) -> {
+					System.out.println(printPrefix+"      "+readMessage.toString());
+				});
+			};
+			if (syncMessage.getRequest().isPresent()) {
+				System.out.println(printPrefix+"    Request: TODO");
+			};
+			if (syncMessage.getSent().isPresent()) {
+				System.out.println(printPrefix+"    Sent:");
+				SentTranscriptMessage sent = syncMessage.getSent().get();
+				if (sent.getDestination().isPresent()) {
+					System.out.println(printPrefix+"      Destination:");
+					SignalServiceAddress destination = sent.getDestination().get();
+					String identifier = destination.getIdentifier();
+					System.out.println(printPrefix+"        Identifier: "+identifier);
+					if (destination.getNumber().isPresent()) {
+						String number = destination.getNumber().get();
+						System.out.println(printPrefix+"        Number: "+number);
+					}
+					if (destination.getRelay().isPresent()) {
+						String relay = destination.getRelay().get();
+						System.out.println(printPrefix+"        Relay: "+relay);
+					}
+				}
+				long expirationStartTimestamp = sent.getExpirationStartTimestamp();
+				if (expirationStartTimestamp > 0) {
+					System.out.println(printPrefix+"      ExpirationStartTimestamp:"+expirationStartTimestamp);
+					
+				}
+				SignalServiceDataMessage message = sent.getMessage();
+				System.out.println(printPrefix+"      Message:");
+				if (message.getAttachments().isPresent()) {
+					System.out.println("        Attachments: TODO");	
+				}
+				if (message.getBody().isPresent()) {
+					String body = message.getBody().get();
+					System.out.println(printPrefix+"        Body: \""+body+"\"");
+				}
+				int expiresInSeconds = message.getExpiresInSeconds();
+				if (expiresInSeconds > 0) {
+					System.out.println(printPrefix+"        ExpiresInSeconds: "+expiresInSeconds);
+				}
+				if (message.getGroupContext().isPresent()) {
+					SignalServiceGroupContext groupContext = message.getGroupContext().get();
+					printGroupContext(groupContext, printPrefix+"        ");
+				}
+				System.out.println(printPrefix+"        Recipients: ");
+				sent.getRecipients().forEach(serviceAdress -> {
+					System.out.println(printPrefix+"          "+serviceAdress.getNumber().get());
+				});
+				System.out.println(printPrefix+"        timestamp: "+sent.getTimestamp());
+				if (sent.isRecipientUpdate()) {
+					System.out.println(printPrefix+"        isRecipientUpdate");
+				}
+			};
+			if (syncMessage.getStickerPackOperations().isPresent()) {
+				System.out.println(printPrefix+"    StickerPackOperations: TODO");
+			};
+			if (syncMessage.getVerified().isPresent()) {
+				System.out.println(printPrefix+"    Verified: TODO");
+			};
+			if (syncMessage.getViewOnceOpen().isPresent()) {
+				System.out.println(printPrefix+"    ViewOnceOpen: TODO");
+			};
+		}
+		long timestamp = content.getTimestamp();
+		System.out.println(printPrefix+"  timestamp: "+timestamp);
+		if (content.getTypingMessage().isPresent()) {
+			//SignalServiceTypingMessage typingMessage = content.getTypingMessage().get();
+			System.out.println(printPrefix+"  TypingMessage: TODO");
+		}
+	}
+
+	private void printGroupContext(SignalServiceGroupContext groupContext, String prefix) {
+		System.out.println(prefix+"GroupContext");
+		if (groupContext.getGroupV1().isPresent()) {
+			SignalServiceGroup group = groupContext.getGroupV1().get();
+			System.out.println(prefix+"  GroupV1");
+			if (group.getAvatar().isPresent()) {
+				System.out.println(prefix+"    Avatar: TODO");
+			}
+			byte[] groupId = group.getGroupId();
+			System.out.println(prefix+"    GroupId: "+Base64.encodeBytes(groupId));
+			if (group.getMembers().isPresent()) {
+				System.out.println(prefix+"    Members: TODO");
+			}
+			if (group.getName().isPresent()) {
+				String name = group.getName().get();
+				System.out.println(prefix+"    Name: "+name);
+			}
+			Type type = group.getType();
+			System.out.println(prefix+"    Type: "+type.name());
+		}
+		if (groupContext.getGroupV2().isPresent()) {
+			//SignalServiceGroupV2 group = groupContext.getGroupV2().get();
+			System.out.println(prefix+"  GroupV2: TODO");
+			//group.getMasterKey();
+			//group.getRevision();
+			//group.getSignedGroupChange();
+		}
+	}
 
 	private void handleSyncMessage(SignalServiceContent content, String sender) {
 		SignalServiceSyncMessage syncMessage = content.getSyncMessage().get();

@@ -17,7 +17,7 @@ typedef struct {
     const char *chat;
     const char *sender;
     const char *message;
-    signed long timestamp;
+    /*signed*/ long timestamp;
     PurpleMessageFlags flags;
     int error;
 } PurpleSignalMessage;
