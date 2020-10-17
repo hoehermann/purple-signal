@@ -30,11 +30,13 @@ char *find_own_path() {
 }
 #else
 #define CLASSPATH_SEPARATOR ':'
+#ifndef __USE_GNU
 #define __USE_GNU
+#endif
 #include <dlfcn.h>
 char *find_own_path() {
     Dl_info info;
-    if (dladdr(find_own_path, &info)) {
+    if (dladdr((void*)(find_own_path), &info)) {
         return dirname(g_strdup(info.dli_fname));
     } else {
         return NULL;
@@ -43,12 +45,13 @@ char *find_own_path() {
 #endif
 
 void purplesignal_error(uintptr_t pc, int level, const char *message) {
+    /*
     assert(level > 0);
     PurpleSignalMessage *psm = g_malloc0(sizeof(PurpleSignalMessage));
     psm->pc = pc;
     psm->error = level;
     psm->message = g_strdup(message);
-    signal_handle_message_async(psm);
+    signal_handle_message_async(psm);*/
 }
 
 char *readdir_of_jars(const char *path, const char *prefix) {
@@ -84,7 +87,8 @@ char *readdir_of_jars(const char *path, const char *prefix) {
 }
 
 char *purplesignal_init(const char *signal_cli_path, SignalJVM *sjvm) {
-    if (sjvm->vm != NULL && sjvm->env != NULL) {
+    return "NOT IMPLEMENTED";
+    /*if (sjvm->vm != NULL && sjvm->env != NULL) {
         signal_debug_async(PURPLE_DEBUG_INFO, "jni pointers not null. JVM seems to be initialized already.");
         return NULL;
     } else {
@@ -124,19 +128,19 @@ char *purplesignal_init(const char *signal_cli_path, SignalJVM *sjvm) {
         } else {
             return g_strdup("Unable to initialize Java VM."); // TODO: append res code
         };
-    }
+    }*/
 }
 
 void purplesignal_destroy(SignalJVM *sjvm) {
-    if (sjvm && sjvm->vm && *sjvm->vm) {
+    /*if (sjvm && sjvm->vm && *sjvm->vm) {
         (*sjvm->vm)->DestroyJavaVM(sjvm->vm);
     }
     sjvm->vm = NULL;
-    sjvm->env = NULL;
+    sjvm->env = NULL;*/
 }
 
 char * get_exception_message(JNIEnv *env, const char * fallback_message) {
-    if ((*env)->ExceptionCheck(env)) {
+    /*if ((*env)->ExceptionCheck(env)) {
         jthrowable jexception;
         jexception = (*env)->ExceptionOccurred(env);
         jboolean isCopy = 0;
@@ -149,11 +153,11 @@ char * get_exception_message(JNIEnv *env, const char * fallback_message) {
         return errmsg;
     } else {
         return g_strdup(fallback_message);
-    }
+    }*/
 }
 
 char *purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, uintptr_t connection, const char* username, const char * settings_dir) {
-    ps->class = (*sjvm.env)->FindClass(sjvm.env, "de/hehoe/purple_signal/PurpleSignal");
+    /*ps->class = (*sjvm.env)->FindClass(sjvm.env, "de/hehoe/purple_signal/PurpleSignal");
     if (ps->class == NULL) {
         return get_exception_message(sjvm.env, "Failed to find PurpleSignal class.");
     }
@@ -182,11 +186,11 @@ char *purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, uintptr_t connection,
     }
     signal_debug_async(PURPLE_DEBUG_INFO, "Starting background thread…");
     (*sjvm.env)->CallVoidMethod(sjvm.env, ps->instance, method);
-    return NULL;
+    return NULL;*/
 }
 
 int purplesignal_close(SignalJVM sjvm, PurpleSignal *ps) {
-    if (sjvm.vm == NULL || sjvm.env == NULL || ps->class == NULL || ps->instance == NULL) {
+    /*if (sjvm.vm == NULL || sjvm.env == NULL || ps->class == NULL || ps->instance == NULL) {
         signal_debug_async(PURPLE_DEBUG_INFO, "Pointer already NULL during purplesignal_close(). Assuming no connection ever made.");
         return 1;
     }
@@ -196,11 +200,11 @@ int purplesignal_close(SignalJVM sjvm, PurpleSignal *ps) {
         return 0;
     }
     (*sjvm.env)->CallVoidMethod(sjvm.env, ps->instance, method);
-    return 1;
+    return 1;*/
 }
 
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNatively(JNIEnv *env, jclass cls, jlong pc, jstring jchat, jstring jsender, jstring jmessage, jlong timestamp, jint flags) {
-    const char *chat = (*env)->GetStringUTFChars(env, jchat, 0);
+/*    const char *chat = (*env)->GetStringUTFChars(env, jchat, 0);
     const char *sender = (*env)->GetStringUTFChars(env, jsender, 0);
     const char *message = (*env)->GetStringUTFChars(env, jmessage, 0);
     PurpleSignalMessage *psm = g_malloc0(sizeof(PurpleSignalMessage));
@@ -213,23 +217,23 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNa
     (*env)->ReleaseStringUTFChars(env, jmessage, message);
     (*env)->ReleaseStringUTFChars(env, jchat, chat);
     (*env)->ReleaseStringUTFChars(env, jsender, sender);
-    signal_handle_message_async(psm);
+    signal_handle_message_async(psm);*/
 }
 
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleErrorNatively(JNIEnv *env, jclass cls, jlong pc, jstring jmessage) {
-    const char *message = (*env)->GetStringUTFChars(env, jmessage, 0);
+    /*const char *message = (*env)->GetStringUTFChars(env, jmessage, 0);
     purplesignal_error(pc, PURPLE_DEBUG_ERROR, message);
-    (*env)->ReleaseStringUTFChars(env, jmessage, message);
+    (*env)->ReleaseStringUTFChars(env, jmessage, message);*/
 }
 
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_logNatively(JNIEnv *env, jclass cls, jint level, jstring jmessage) {
-    const char *message = (*env)->GetStringUTFChars(env, jmessage, 0);
+    /*const char *message = (*env)->GetStringUTFChars(env, jmessage, 0);
     signal_debug_async(level, message);
-    (*env)->ReleaseStringUTFChars(env, jmessage, message);
+    (*env)->ReleaseStringUTFChars(env, jmessage, message);*/
 }
 
 int purplesignal_send(SignalJVM sjvm, PurpleSignal *ps, uintptr_t pc, const char *who, const char *message) {
-    if (sjvm.vm == NULL || sjvm.env == NULL || ps->class == NULL || ps->instance == NULL) {
+/*    if (sjvm.vm == NULL || sjvm.env == NULL || ps->class == NULL || ps->instance == NULL) {
         purplesignal_error(pc, PURPLE_DEBUG_ERROR, "PurpleSignal has not been initialized.");
         return 1;
     }
@@ -241,5 +245,6 @@ int purplesignal_send(SignalJVM sjvm, PurpleSignal *ps, uintptr_t pc, const char
     jstring jwho = (*sjvm.env)->NewStringUTF(sjvm.env, who);
     jstring jmessage = (*sjvm.env)->NewStringUTF(sjvm.env, message);
     jint ret = (*sjvm.env)->CallIntMethod(sjvm.env, ps->instance, method, jwho, jmessage);
-    return ret;
+    return ret;*/
+    return 1;
 }

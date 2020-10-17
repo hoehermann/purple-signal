@@ -16,9 +16,9 @@ message(STATUS
 
 set(SRC_LIST
     purple_compat.h
-    libsignal.c
+    libsignal.cpp
     libsignal-jni.h
-    libsignal-jni.c
+    libsignal-jni.cpp
     )
 
 set(TARGET_NAME ${PROJECT_NAME})
@@ -28,8 +28,10 @@ add_library(${TARGET_NAME} SHARED ${SRC_LIST})
 #add_executable(${TARGET_NAME} ${SRC_LIST})
 
 target_compile_options(${TARGET_NAME} PRIVATE 
-    -Werror 
+    #-Werror 
     -Wall 
+    -Wno-deprecated-declarations
+    -Wno-write-strings
     #-Wextra 
     #-Wconversion 
     #-Wsign-conversion 

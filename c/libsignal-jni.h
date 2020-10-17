@@ -8,7 +8,7 @@ typedef struct {
 } SignalJVM;
 
 typedef struct {
-    jclass class; // a reference to the PurpleSignal (Java) class.
+    jclass psclass; // a reference to the PurpleSignal (Java) class.
     jobject instance; // reference to this connection's PurpleSignal (Java) instance.
 } PurpleSignal;
 
@@ -19,11 +19,11 @@ typedef struct {
     const char *message;
     /*signed*/ long timestamp;
     PurpleMessageFlags flags;
-    int error;
+    PurpleDebugLevel error;
 } PurpleSignalMessage;
 
 void signal_handle_message_async(PurpleSignalMessage *psm);
-void signal_debug_async(int level, const char *message);
+void signal_debug_async(PurpleDebugLevel level, const char *message);
 
 char *purplesignal_init(const char *signal_cli_path, SignalJVM *sjvm);
 void purplesignal_destroy(SignalJVM *ps);

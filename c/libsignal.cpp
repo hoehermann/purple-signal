@@ -63,12 +63,6 @@ typedef struct {
 
 SignalJVM signaljvm; // only one Java VM over all connections
 
-static const char *
-signal_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
-{
-    return "signal";
-}
-
 PurpleConversation *signal_find_conversation(const char *username, PurpleAccount *account) {
     PurpleIMConversation *imconv = purple_conversations_find_im_with_account(username, account);
     if (imconv == NULL) {
@@ -85,7 +79,7 @@ PurpleConversation *signal_find_conversation(const char *username, PurpleAccount
 void
 signal_display_message(PurpleConnection *pc, PurpleSignalMessage *psm)
 {
-    SignalAccount *sa = purple_connection_get_protocol_data(pc);
+    SignalAccount *sa = static_cast<SignalAccount*>(purple_connection_get_protocol_data(pc));
     PurpleConversation *conv = signal_find_conversation(psm->chat, sa->account);
     purple_conversation_write(conv, psm->sender, psm->message, psm->flags, psm->timestamp);
 }
@@ -102,6 +96,14 @@ signal_process_message(PurpleConnection *pc, PurpleSignalMessage *psm)
         psm->timestamp = time(NULL);
     }
     signal_display_message(pc, psm);
+}
+
+extern "C" {
+
+static const char *
+signal_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
+{
+    return "signal";
 }
 
 void
@@ -130,10 +132,11 @@ signal_login(PurpleAccount *account)
     // this protocol does not support anything special right now
     PurpleConnectionFlags pc_flags;
     pc_flags = purple_connection_get_flags(pc);
-    pc_flags |= PURPLE_CONNECTION_NO_IMAGES;
-    pc_flags |= PURPLE_CONNECTION_NO_FONTSIZE;
-    pc_flags |= PURPLE_CONNECTION_NO_NEWLINES; // TODO: find out how signal represents newlines, use them
-    pc_flags |= PURPLE_CONNECTION_NO_BGCOLOR;
+    pc_flags = (PurpleConnectionFlags)(pc_flags 
+    | PURPLE_CONNECTION_NO_IMAGES
+    | PURPLE_CONNECTION_NO_FONTSIZE
+    | PURPLE_CONNECTION_NO_NEWLINES // TODO: find out how signal represents newlines, use them
+    | PURPLE_CONNECTION_NO_BGCOLOR);
     purple_connection_set_flags(pc, pc_flags);
 
     SignalAccount *sa = g_new0(SignalAccount, 1);
@@ -161,7 +164,7 @@ signal_login(PurpleAccount *account)
 static void
 signal_close(PurpleConnection *pc)
 {
-    SignalAccount *sa = purple_connection_get_protocol_data(pc);
+    SignalAccount *sa = (SignalAccount *)purple_connection_get_protocol_data(pc);
     purplesignal_close(signaljvm, &sa->ps);
     g_free(sa);
 }
@@ -187,7 +190,7 @@ signal_status_types(PurpleAccount *account)
 static int
 signal_send_im(PurpleConnection *pc, const gchar *who, const gchar *message, PurpleMessageFlags flags)
 {
-    SignalAccount *sa = purple_connection_get_protocol_data(pc);
+    SignalAccount *sa = (SignalAccount *)purple_connection_get_protocol_data(pc);
     return purplesignal_send(signaljvm, &sa->ps, (uintptr_t)pc, who, message);
 }
 
@@ -286,11 +289,11 @@ static PurplePluginInfo info = {
     NULL,                            /* dependencies */
     PURPLE_PRIORITY_DEFAULT,        /* priority */
     SIGNAL_PLUGIN_ID,                /* id */
-    "signal",                        /* name */
+    (char*)"signal",                        /* name */
     SIGNAL_PLUGIN_VERSION,            /* version */
-    "",                                /* summary */
-    "",                                /* description */
-    "Hermann Hoehne <hoehermann@gmx.de>", /* author */
+    (char*)"",                                /* summary */
+    (char*)"",                                /* description */
+    (char*)"Hermann Hoehne <hoehermann@gmx.de>", /* author */
     SIGNAL_PLUGIN_WEBSITE,            /* homepage */
     libpurple2_plugin_load,            /* load */
     libpurple2_plugin_unload,        /* unload */
@@ -306,6 +309,7 @@ static PurplePluginInfo info = {
 };
 
 PURPLE_INIT_PLUGIN(signal, plugin_init, info);
+}
 
 gboolean
 signal_check_connection_existance(PurpleConnection *pc) {
@@ -376,6 +380,6 @@ signal_handle_message_async(PurpleSignalMessage *psm)
     purple_timeout_add(0, signal_handle_message_mainthread, (void*)psm); // yes, this is indeed neccessary – we checked
 }
 
-void signal_debug_async(int level, const char *message) {
+void signal_debug_async(PurpleDebugLevel level, const char *message) {
     purple_debug(level, "signal", "%s\n", message);
 }
