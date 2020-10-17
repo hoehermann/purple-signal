@@ -86,7 +86,7 @@ char *readdir_of_jars(const char *path, const char *prefix) {
     }
 }
 
-char *purplesignal_init(const char *signal_cli_path, SignalJVM *sjvm) {
+char *purplesignal_init(const char *signal_cli_path, TypedJNIEnv *sjvm) {
     return "NOT IMPLEMENTED";
     /*if (sjvm->vm != NULL && sjvm->env != NULL) {
         signal_debug_async(PURPLE_DEBUG_INFO, "jni pointers not null. JVM seems to be initialized already.");
@@ -131,7 +131,7 @@ char *purplesignal_init(const char *signal_cli_path, SignalJVM *sjvm) {
     }*/
 }
 
-void purplesignal_destroy(SignalJVM *sjvm) {
+void purplesignal_destroy(TypedJNIEnv *sjvm) {
     /*if (sjvm && sjvm->vm && *sjvm->vm) {
         (*sjvm->vm)->DestroyJavaVM(sjvm->vm);
     }
@@ -156,7 +156,7 @@ char * get_exception_message(JNIEnv *env, const char * fallback_message) {
     }*/
 }
 
-char *purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, uintptr_t connection, const char* username, const char * settings_dir) {
+char *purplesignal_login(TypedJNIEnv* sjvm, PurpleSignal *ps, uintptr_t connection, const char* username, const char * settings_dir) {
     /*ps->class = (*sjvm.env)->FindClass(sjvm.env, "de/hehoe/purple_signal/PurpleSignal");
     if (ps->class == NULL) {
         return get_exception_message(sjvm.env, "Failed to find PurpleSignal class.");
@@ -189,7 +189,7 @@ char *purplesignal_login(SignalJVM sjvm, PurpleSignal *ps, uintptr_t connection,
     return NULL;*/
 }
 
-int purplesignal_close(SignalJVM sjvm, PurpleSignal *ps) {
+int purplesignal_close(TypedJNIEnv *sjvm, PurpleSignal *ps) {
     /*if (sjvm.vm == NULL || sjvm.env == NULL || ps->class == NULL || ps->instance == NULL) {
         signal_debug_async(PURPLE_DEBUG_INFO, "Pointer already NULL during purplesignal_close(). Assuming no connection ever made.");
         return 1;
@@ -232,7 +232,7 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_logNatively(JNI
     (*env)->ReleaseStringUTFChars(env, jmessage, message);*/
 }
 
-int purplesignal_send(SignalJVM sjvm, PurpleSignal *ps, uintptr_t pc, const char *who, const char *message) {
+int purplesignal_send(TypedJNIEnv *sjvm, PurpleSignal *ps, uintptr_t pc, const char *who, const char *message) {
 /*    if (sjvm.vm == NULL || sjvm.env == NULL || ps->class == NULL || ps->instance == NULL) {
         purplesignal_error(pc, PURPLE_DEBUG_ERROR, "PurpleSignal has not been initialized.");
         return 1;

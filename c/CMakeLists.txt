@@ -19,6 +19,8 @@ set(SRC_LIST
     libsignal.cpp
     libsignal-jni.h
     libsignal-jni.cpp
+    typedjni.hpp
+    typedjni.cpp
     )
 
 set(TARGET_NAME ${PROJECT_NAME})

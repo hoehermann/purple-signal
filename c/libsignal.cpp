@@ -61,7 +61,7 @@ typedef struct {
     PurpleSignal ps;
 } SignalAccount;
 
-SignalJVM signaljvm; // only one Java VM over all connections
+TypedJNIEnv *signaljvm = nullptr; // only one Java VM over all connections
 
 PurpleConversation *signal_find_conversation(const char *username, PurpleAccount *account) {
     PurpleIMConversation *imconv = purple_conversations_find_im_with_account(username, account);
@@ -120,7 +120,7 @@ signal_login(PurpleAccount *account)
         );
         return;
     }
-    char *errormsg = purplesignal_init(libdir, &signaljvm);
+    char *errormsg = purplesignal_init(libdir, signaljvm);
     if (errormsg) {
         purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, errormsg);
         g_free(errormsg);
@@ -239,7 +239,7 @@ static gboolean
 plugin_unload(PurplePlugin *plugin, GError **error)
 {
     purple_signals_disconnect_by_handle(plugin);
-    purplesignal_destroy(&signaljvm);
+    purplesignal_destroy(signaljvm);
     return TRUE;
 }
 
