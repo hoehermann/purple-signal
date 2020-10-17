@@ -198,7 +198,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
             	logNatively(DEBUG_LEVEL_INFO, "Failed to decrypt incoming message. Ignoring message.");
                 //handleErrorNatively(this.connection, "Failed to decrypt incoming message.");
             } else {
-            	long timestamp = envelope.getTimestamp();
+            	long timestamp = 0;//envelope.getTimestamp();
             	printSignalServiceContent(content);
                 if (content.getDataMessage().isPresent()) {
                     handleDataMessage(content, source);
@@ -219,7 +219,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
 	private void printEnvelope(SignalServiceEnvelope envelope) {
 		System.out.println(printPrefix+"SignalServiceEnvelope");
-		long serverTimestamp = envelope.getServerTimestamp();
+		long serverTimestamp = 0;//envelope.getServerTimestamp();
 		System.out.println(printPrefix+"  ServerTimestamp: "+serverTimestamp);
 		if (envelope.hasSource()) {
 			SignalServiceAddress sourceAddress = envelope.getSourceAddress();
@@ -277,7 +277,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			//SignalServiceReceiptMessage receiptMessage = content.getReceiptMessage().get();
 			System.out.println(printPrefix+"  ReceiptMessage: TODO");
 		}
-		long serverTimestamp = content.getServerTimestamp();
+		long serverTimestamp = 0;//content.getServerTimestamp();
 		System.out.println(printPrefix+"  serverTimestamp: "+serverTimestamp);
 		if (content.getSyncMessage().isPresent()) {
 			System.out.println(printPrefix+"  SyncMessage");
