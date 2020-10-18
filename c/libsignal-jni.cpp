@@ -155,39 +155,14 @@ char * get_exception_message(JNIEnv *env, const char * fallback_message) {
     }
 }
 
-// TODO: research: can j_string be an implicit conversion function?
-class TypedJNIString {
-    private:
-    jstring jstr;
-    JNIEnv *env;
-    public:
-    TypedJNIString(JNIEnv *env, const std::string & str) : TypedJNIString(env, str.c_str()) {};
-    TypedJNIString(JNIEnv *env, const char *str) : env(env) {
-        jstr = env->NewStringUTF(str);
-        if (jstr == NULL) {
-            throw std::runtime_error("NewStringUTF failed for string '"+std::string(str)+"'.");
-        }
-    }
-    virtual ~TypedJNIString() {
-        // clean up as recommended by https://stackoverflow.com/questions/6238785/
-        env->DeleteLocalRef(jstr);
-    }
-    jstring j_string() {
-        return jstr;
-    }
-    operator jstring() const {
-        return jstr;
-    }
-};
-
 char *purplesignal_login(TypedJNIEnv* sjvm, PurpleSignal *ps, uintptr_t connection, const char* username, const char * settings_dir) {
     try {
         ps->psclass = std::make_shared<TypedJNIClass>(
-            sjvm->FindClass("de/hehoe/purple_signal/PurpleSignal")
+            sjvm->find_class("de/hehoe/purple_signal/PurpleSignal")
         );
         ps->instance = std::make_shared<TypedJNIObject>(
             ps->psclass->GetConstructor<jlong,jstring,jstring>()(
-                connection, TypedJNIString(sjvm->env, username), TypedJNIString(sjvm->env, settings_dir).j_string()
+                connection, sjvm->make_string(username), sjvm->make_string(settings_dir)
             )
         );
         signal_debug_async(PURPLE_DEBUG_INFO, "Starting background thread…");
