@@ -70,6 +70,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
     private ProvisioningManager provisioningManager = null;
     private long connection = 0;
     private boolean keepReceiving = false;
+    private Thread receiverThread = null;
     private String username = null;
 
     public PurpleSignal(long connection, String username, String settingsDir) throws IOException, TimeoutException, InvalidKeyException, UserAlreadyExists {
@@ -164,11 +165,15 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
     }
 
     public void startReceiving() {
-        this.keepReceiving = true;
-        Thread t = new Thread(this);
-        t.setName("Receiver");
-        t.setDaemon(true);
-        t.start();
+	if (receiverThread != null) {
+		handleErrorNatively(this.connection, "Called startReceiving() on a connection already receiving. This is a bug.");
+	} else {
+		this.keepReceiving = true;
+		receiverThread = new Thread(this);
+		receiverThread.setName("Receiver");
+		receiverThread.setDaemon(true);
+		receiverThread.start();
+	}
     }
 
     public void stopReceiving() {
@@ -181,6 +186,18 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
                 e.printStackTrace();
             }
         }
+	if (receiverThread != null) {
+		logNatively(DEBUG_LEVEL_INFO, "Background thread still active. Waiting for graceful shutdown.");
+            try {
+		receiverThread.join();
+            } catch (InterruptedException e) {
+                // I still don't care
+                e.printStackTrace();
+            }
+		logNatively(DEBUG_LEVEL_INFO, "Background thread joined.");
+		receiverThread = null;
+	}
+	// TODO: join all other user Threads (internal WebSocket, OkHttp, …) for clean shutdown
     }
 
     @Override
