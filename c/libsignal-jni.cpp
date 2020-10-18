@@ -132,8 +132,12 @@ char *purplesignal_init(const char *signal_cli_path, TypedJNIEnv *&sjvm) {
 }
 
 void purplesignal_destroy(TypedJNIEnv * & sjvm) {
-    // TODO: find out whether this is called per connection – would destroy all connections
-
+    if (sjvm == nullptr) {
+        signal_debug(PURPLE_DEBUG_INFO, "Pointer already NULL during purplesignal_destroy(). Assuming no JVM ever started.");
+    } else {
+        delete sjvm;
+        sjvm = nullptr;
+    }
 }
 
 char * get_exception_message(JNIEnv *env, const char * fallback_message) {
@@ -175,13 +179,13 @@ char *purplesignal_login(TypedJNIEnv* sjvm, PurpleSignal *ps, uintptr_t connecti
 
 int purplesignal_close(const PurpleSignal & ps) {
     if (ps.instance == nullptr) {
-        signal_debug_async(PURPLE_DEBUG_INFO, "Pointer already NULL during purplesignal_close(). Assuming no connection ever made.");
+        signal_debug(PURPLE_DEBUG_INFO, "Pointer already NULL during purplesignal_close(). Assuming no connection ever made.");
         return 1;
     }
     try {
         ps.instance->GetMethod<void()>("stopReceiving")();
     } catch (std::exception & e) {
-        signal_debug_async(PURPLE_DEBUG_ERROR, e.what());
+        signal_debug(PURPLE_DEBUG_ERROR, e.what());
         return 0;
     }
     return 1;
