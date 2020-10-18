@@ -30,10 +30,11 @@ add_library(${TARGET_NAME} SHARED ${SRC_LIST})
 #add_executable(${TARGET_NAME} ${SRC_LIST})
 
 target_compile_options(${TARGET_NAME} PRIVATE 
-    #-Werror 
+    #-Werror # TODO: re-enable all warnings
     -Wall 
     -Wno-deprecated-declarations
     -Wno-write-strings
+    -Wno-parentheses
     #-Wextra 
     #-Wconversion 
     #-Wsign-conversion 

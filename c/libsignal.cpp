@@ -165,7 +165,7 @@ static void
 signal_close(PurpleConnection *pc)
 {
     SignalAccount *sa = (SignalAccount *)purple_connection_get_protocol_data(pc);
-    purplesignal_close(signaljvm, &sa->ps);
+    purplesignal_close(sa->ps);
     g_free(sa);
 }
 
