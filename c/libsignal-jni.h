@@ -4,9 +4,8 @@
 #include <memory>
 
 typedef struct {
-    // TODO: use unique_ptr?
-    std::shared_ptr<TypedJNIClass> psclass; // a reference to the PurpleSignal (Java) class.
-    std::shared_ptr<TypedJNIObject> instance; // reference to this connection's PurpleSignal (Java) instance.
+    std::unique_ptr<TypedJNIClass> psclass; // a reference to the PurpleSignal (Java) class.
+    std::unique_ptr<TypedJNIObject> instance; // reference to this connection's PurpleSignal (Java) instance.
 } PurpleSignal;
 
 typedef struct {

@@ -161,10 +161,10 @@ char * get_exception_message(JNIEnv *env, const char * fallback_message) {
 
 char *purplesignal_login(TypedJNIEnv* sjvm, PurpleSignal *ps, uintptr_t connection, const char* username, const char * settings_dir) {
     try {
-        ps->psclass = std::make_shared<TypedJNIClass>(
+        ps->psclass = std::make_unique<TypedJNIClass>(
             sjvm->find_class("de/hehoe/purple_signal/PurpleSignal")
         );
-        ps->instance = std::make_shared<TypedJNIObject>(
+        ps->instance = std::make_unique<TypedJNIObject>(
             ps->psclass->GetConstructor<jlong,jstring,jstring>()(
                 connection, sjvm->make_string(username), sjvm->make_string(settings_dir)
             )
