@@ -30,15 +30,16 @@ add_library(${TARGET_NAME} SHARED ${SRC_LIST})
 #add_executable(${TARGET_NAME} ${SRC_LIST})
 
 target_compile_options(${TARGET_NAME} PRIVATE 
-    #-Werror # TODO: re-enable all warnings
+    -Werror 
     -Wall 
-    -Wno-deprecated-declarations
-    -Wno-write-strings
-    -Wno-parentheses
     #-Wextra 
     #-Wconversion 
     #-Wsign-conversion 
     -Wsign-compare
+    # TODO: push these when including purple.h only
+    -DGLIB_DISABLE_DEPRECATION_WARNINGS
+    -Wno-write-strings
+    -Wno-parentheses
 )
 
 target_include_directories(${TARGET_NAME} PRIVATE
