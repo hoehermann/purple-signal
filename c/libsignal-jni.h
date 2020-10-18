@@ -4,8 +4,9 @@
 #include <memory>
 
 typedef struct {
-    std::unique_ptr<TypedJNIClass> psclass; // a reference to the PurpleSignal (Java) class.
+    std::unique_ptr<TypedJNIClass> psclass; // a reference to the global PurpleSignal (Java) class.
     std::unique_ptr<TypedJNIObject> instance; // reference to this connection's PurpleSignal (Java) instance.
+    std::function<jint(jstring,jstring)> send_message; // reference to this connection's PurpleSignal (Java) instance's sendMessage method.
 } PurpleSignal;
 
 typedef struct {
