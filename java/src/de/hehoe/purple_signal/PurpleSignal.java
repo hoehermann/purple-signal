@@ -91,6 +91,12 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
         }
         logNatively(DEBUG_LEVEL_INFO, "Using settings path " + settingsPath);
         String dataPath = settingsPath + "/data";
+	{
+		File f = new File(dataPath);
+		if (!f.isDirectory()) {
+			f.mkdirs();
+		}
+	}
         if (SignalAccount.userExists(dataPath, this.username)) {
         	this.manager = Manager.init(this.username, settingsPath, serviceConfiguration, USER_AGENT);
             if (!this.manager.isRegistered()) {
