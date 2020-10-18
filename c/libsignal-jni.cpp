@@ -166,7 +166,7 @@ char *purplesignal_login(TypedJNIEnv* sjvm, PurpleSignal *ps, uintptr_t connecti
         );
         ps->instance = std::make_unique<TypedJNIObject>(
             ps->psclass->GetConstructor<jlong,jstring,jstring>()(
-                connection, sjvm->make_string(username), sjvm->make_string(settings_dir)
+                connection, sjvm->make_jstring(username), sjvm->make_jstring(settings_dir)
             )
         );
         signal_debug_async(PURPLE_DEBUG_INFO, "Starting background thread…");
