@@ -380,8 +380,8 @@ signal_handle_message_async(PurpleSignalMessage *psm)
     purple_timeout_add(0, signal_handle_message_mainthread, (void*)psm); // yes, this is indeed neccessary – we checked
 }
 
-void signal_debug(PurpleDebugLevel level, const char *message) {
-    purple_debug(level, "signal", "%s\n", message);
+void signal_debug(PurpleDebugLevel level, const std::string & message) {
+    purple_debug(level, "signal", "%s\n", message.c_str());
 }
 
 void signal_debug_async(PurpleDebugLevel level, const char *message) {
