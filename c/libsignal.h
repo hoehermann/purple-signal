@@ -6,13 +6,8 @@ typedef std::function<void(PurpleConnection *pc)> PurpleSignalConnectionFunction
 
 typedef struct {
     uintptr_t pc;
-    const char *chat;
-    const char *sender;
-    const char *message;
-    /*signed*/ long timestamp;
-    PurpleMessageFlags flags;
-    PurpleDebugLevel error;
     std::unique_ptr<PurpleSignalConnectionFunction> function;
 } PurpleSignalMessage;
 
-void signal_process_message(PurpleConnection *pc, PurpleSignalMessage *psm);
+void signal_process_error(PurpleConnection *pc, const PurpleDebugLevel level, const std::string & message);
+void signal_process_message(PurpleConnection *pc, const std::string & chat, const std::string & sender, const std::string & message, const long timestamp, const PurpleMessageFlags flags);

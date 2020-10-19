@@ -77,25 +77,36 @@ PurpleConversation *signal_find_conversation(const char *username, PurpleAccount
 }
 
 void
-signal_display_message(PurpleConnection *pc, PurpleSignalMessage *psm)
+signal_display_message(PurpleConnection *pc, const std::string & chat, const std::string & sender, const std::string & message, const long timestamp, const PurpleMessageFlags flags)
 {
     SignalAccount *sa = static_cast<SignalAccount*>(purple_connection_get_protocol_data(pc));
-    PurpleConversation *conv = signal_find_conversation(psm->chat, sa->account);
-    purple_conversation_write(conv, psm->sender, psm->message, psm->flags, psm->timestamp);
+    PurpleConversation *conv = signal_find_conversation(chat.c_str(), sa->account);
+    purple_conversation_write(conv, sender.c_str(), message.c_str(), flags, timestamp);
 }
 
 /*
- * Interprets a message. Handles login success and failure. Forwards errors.
+ * Interprets a message. Handles login success and failure.
  */
 void
-signal_process_message(PurpleConnection *pc, PurpleSignalMessage *psm)
+signal_process_message(PurpleConnection *pc, const std::string & chat, const std::string & sender, const std::string & message, const long timestamp, const PurpleMessageFlags flags)
 {
     //SignalAccount *sa = purple_connection_get_protocol_data(pc);
     //PurpleAccount *account = purple_connection_get_account(pc);
-    if (!psm->timestamp) {
-        psm->timestamp = time(NULL);
+    long t = timestamp;
+    if (!t) {
+        t = time(NULL);
     }
-    signal_display_message(pc, psm);
+    signal_display_message(pc,  chat, sender, message, t, flags);
+}
+
+/*
+ * Interprets an error. Disables the account.
+ */
+void
+signal_process_error(PurpleConnection *pc, const PurpleDebugLevel level, const std::string & message)
+{
+    purple_debug(level, "signal", "%s\n", message.c_str());
+    purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, message.c_str());
 }
 
 extern "C" {
@@ -341,31 +352,14 @@ signal_handle_message_mainthread(gpointer data)
 {
     PurpleSignalMessage *psm = (PurpleSignalMessage *)data;
     PurpleConnection *pc = (PurpleConnection *)psm->pc;
-    purple_debug_info(
-        "signal", 
-        "Got message: pc=%p chat=%s sender=%s message=… timestamp=%ld flags=… error=%d\n",
-        pc,
-        psm->chat,
-        psm->sender,
-        //psm->message,
-        psm->timestamp,
-        //psm->flags,
-        psm->error
-    );
     int connection_exists = signal_check_connection_existance(pc);
     if (connection_exists == 0) {
         purple_debug_info(
             "signal", "Not handling message for not-existant connection %p.\n", pc
         );
-    } else if (psm->error) {
-        purple_debug(psm->error, "signal", "%s\n", psm->message);
-        purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, psm->message);
     } else {
         (*psm->function)(pc);
     }
-    g_free((char *)psm->chat);
-    g_free((char *)psm->sender);
-    g_free((char *)psm->message);
     g_free(psm);
     return FALSE;
 }

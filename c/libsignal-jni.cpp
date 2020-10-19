@@ -44,14 +44,15 @@ char *find_own_path() {
 }
 #endif
 
-void purplesignal_error(uintptr_t pc, int level, const char *message) {
-    /*
-    assert(level > 0);
-    PurpleSignalMessage *psm = g_malloc0(sizeof(PurpleSignalMessage));
+void purplesignal_error(uintptr_t pc, PurpleDebugLevel level, std::string message) {
+    /*assert(level > 0);*/
+    PurpleSignalMessage *psm = new PurpleSignalMessage;
     psm->pc = pc;
-    psm->error = level;
-    psm->message = g_strdup(message);
-    signal_handle_message_async(psm);*/
+    psm->function = std::make_unique<PurpleSignalConnectionFunction>(
+        [level, message] (PurpleConnection *pc) {
+            signal_process_error(pc, level, message);
+        });
+    signal_handle_message_async(psm);
 }
 
 char *readdir_of_jars(const char *path, const char *prefix) {
@@ -204,13 +205,15 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNa
     const char *message = env->GetStringUTFChars(jmessage, 0);
     PurpleSignalMessage *psm = new PurpleSignalMessage();
     psm->pc = pc;
-    psm->chat = g_strdup(chat);
-    psm->sender = g_strdup(sender);
-    psm->message = g_strdup(message);
-    psm->timestamp = timestamp;
-    psm->flags = static_cast<PurpleMessageFlags>(flags);
-    psm->function = std::make_unique<PurpleSignalConnectionFunction>([psm](PurpleConnection *pc) {
-        signal_process_message(pc, psm);
+    psm->function = std::make_unique<PurpleSignalConnectionFunction>(
+    [
+        chat = std::string(chat), 
+        sender = std::string(sender), 
+        message = std::string(message), 
+        timestamp, 
+        flags = static_cast<PurpleMessageFlags>(flags)
+    ] (PurpleConnection *pc) {
+        signal_process_message(pc, chat, sender, message, timestamp, flags);
     });
     env->ReleaseStringUTFChars(jmessage, message);
     env->ReleaseStringUTFChars(jchat, chat);
