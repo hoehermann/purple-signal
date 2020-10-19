@@ -1,22 +1,12 @@
 #include "typedjni.hpp"
+#include "libsignal.h"
 #include <stdint.h>
-#include <purple.h>
 #include <memory>
 
 typedef struct {
     std::unique_ptr<TypedJNIObject> instance; // reference to this connection's PurpleSignal (Java) instance.
     std::function<jint(jstring,jstring)> send_message; // reference to this connection's PurpleSignal (Java) instance's sendMessage method.
 } PurpleSignal;
-
-typedef struct {
-    uintptr_t pc;
-    const char *chat;
-    const char *sender;
-    const char *message;
-    /*signed*/ long timestamp;
-    PurpleMessageFlags flags;
-    PurpleDebugLevel error;
-} PurpleSignalMessage;
 
 char *purplesignal_init(const char *signal_cli_path, TypedJNIEnv * & sjvm);
 void purplesignal_destroy(TypedJNIEnv * & ps);

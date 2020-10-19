@@ -106,6 +106,7 @@ class TypedJNIConstructor
 {
     public:
     static std::function<TypedJNIObject(Args...)> get(JNIEnv *env, const jclass cls) {
+        // yes indeed GetMethodID as illustrated at https://stackoverflow.com/questions/7260376/
         const jmethodID mid = TypedJNI::GetMethodID(env, cls, "<init>", "("+TypedJNI::GetTypeString<Args...>()+")"+TypedJNI::GetTypeString<void>());
         return [env, cls, mid](Args... args) -> TypedJNIObject {
             return TypedJNIObject(env, cls, env->NewObject(cls, mid, args...));

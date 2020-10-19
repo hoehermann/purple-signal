@@ -361,7 +361,7 @@ signal_handle_message_mainthread(gpointer data)
         purple_debug(psm->error, "signal", "%s\n", psm->message);
         purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, psm->message);
     } else {
-        signal_process_message(pc, psm);
+        (*psm->function)(pc);
     }
     g_free((char *)psm->chat);
     g_free((char *)psm->sender);

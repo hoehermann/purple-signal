@@ -209,6 +209,9 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNa
     psm->message = g_strdup(message);
     psm->timestamp = timestamp;
     psm->flags = static_cast<PurpleMessageFlags>(flags);
+    psm->function = std::make_unique<PurpleSignalConnectionFunction>([psm](PurpleConnection *pc) {
+        signal_process_message(pc, psm);
+    });
     env->ReleaseStringUTFChars(jmessage, message);
     env->ReleaseStringUTFChars(jchat, chat);
     env->ReleaseStringUTFChars(jsender, sender);
