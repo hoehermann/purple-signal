@@ -11,3 +11,4 @@ typedef struct {
 
 void signal_process_error(PurpleConnection *pc, const PurpleDebugLevel level, const std::string & message);
 void signal_process_message(PurpleConnection *pc, const std::string & chat, const std::string & sender, const std::string & message, const long timestamp, const PurpleMessageFlags flags);
+void signal_ask_register_or_link(PurpleConnection *pc);

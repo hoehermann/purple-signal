@@ -72,11 +72,13 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	private boolean keepReceiving = false;
 	private Thread receiverThread = null;
 	private String username = null;
+	private final SignalServiceConfiguration serviceConfiguration;
+	private	final String USER_AGENT = "purple-signal";
+	private final String settingsPath;
 
 	public PurpleSignal(long connection, String username, String settingsDir)
 			throws IOException, TimeoutException, InvalidKeyException, UserAlreadyExists {
-		final String USER_AGENT = "purple-signal";
-		final SignalServiceConfiguration serviceConfiguration = ServiceConfig
+		serviceConfiguration = ServiceConfig
 				.createDefaultServiceConfiguration(USER_AGENT);
 
 		this.connection = connection;
@@ -88,9 +90,10 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		Security.insertProviderAt(new SecurityProvider(), 1);
 		Security.addProvider(new BouncyCastleProvider());
 
-		String settingsPath = getDefaultDataPath();
 		if (!settingsDir.isEmpty()) {
 			settingsPath = settingsDir;
+		} else {
+			settingsPath = getDefaultDataPath();
 		}
 		logNatively(DEBUG_LEVEL_INFO, "Using settings path " + settingsPath);
 		String dataPath = settingsPath + "/data";
@@ -109,13 +112,23 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			this.manager.checkAccountState();
 			logNatively(DEBUG_LEVEL_INFO, "Using registered user " + manager.getUsername());
 		} else {
-			logNatively(DEBUG_LEVEL_INFO, "User does not exist. Asking to link…");
-			this.provisioningManager = new ProvisioningManager(settingsPath, serviceConfiguration, USER_AGENT);
-			final String deviceLinkUri = this.provisioningManager.getDeviceLinkUri();
+			logNatively(DEBUG_LEVEL_INFO, "User does not exist. Asking about how to continue…");
+			askRegisterOrLink(this.connection);
+		}
+	}
+	
+	public void linkAccount() {
+		this.provisioningManager = new ProvisioningManager(settingsPath, serviceConfiguration, USER_AGENT);
+		String deviceLinkUri;
+		try {
+			deviceLinkUri = this.provisioningManager.getDeviceLinkUri();
 			handleMessageNatively(this.connection, "link", this.username,
 					"Please use this code to link this Pidgin account (use a QR encoder for linking with real phones):<br/>"
 							+ deviceLinkUri,
 					0, PURPLE_MESSAGE_NICK);
+		} catch (TimeoutException | IOException e) {
+			handleErrorNatively(this.connection, "Unable to generate device link uri: " + e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -544,4 +557,6 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			long timestamp, int flags);
 
 	public static native void handleErrorNatively(long connection, String error);
+	
+	public static native void askRegisterOrLink(long connection);
 }

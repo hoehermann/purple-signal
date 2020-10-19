@@ -51,7 +51,8 @@ void purplesignal_error(uintptr_t pc, PurpleDebugLevel level, std::string messag
     psm->function = std::make_unique<PurpleSignalConnectionFunction>(
         [level, message] (PurpleConnection *pc) {
             signal_process_error(pc, level, message);
-        });
+        }
+    );
     signal_handle_message_async(psm);
 }
 
@@ -177,8 +178,8 @@ char *purplesignal_login(TypedJNIEnv* sjvm, PurpleSignal *ps, uintptr_t connecti
             )
         );
         ps->send_message = ps->instance->GetMethod<jint(jstring,jstring)>("sendMessage");
-        signal_debug(PURPLE_DEBUG_INFO, "Starting background thread…");
-        ps->instance->GetMethod<void(void)>("startReceiving")();
+        //signal_debug(PURPLE_DEBUG_INFO, "Starting background thread…");
+        //ps->instance->GetMethod<void(void)>("startReceiving")();
         return NULL;
     } catch (std::exception & e) {
         return get_exception_message(sjvm->env, e.what());
@@ -206,18 +207,30 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNa
     PurpleSignalMessage *psm = new PurpleSignalMessage();
     psm->pc = pc;
     psm->function = std::make_unique<PurpleSignalConnectionFunction>(
-    [
-        chat = std::string(chat), 
-        sender = std::string(sender), 
-        message = std::string(message), 
-        timestamp, 
-        flags = static_cast<PurpleMessageFlags>(flags)
-    ] (PurpleConnection *pc) {
-        signal_process_message(pc, chat, sender, message, timestamp, flags);
-    });
+        [
+            chat = std::string(chat), 
+            sender = std::string(sender), 
+            message = std::string(message), 
+            timestamp, 
+            flags = static_cast<PurpleMessageFlags>(flags)
+        ] (PurpleConnection *pc) {
+            signal_process_message(pc, chat, sender, message, timestamp, flags);
+        }
+    );
     env->ReleaseStringUTFChars(jmessage, message);
     env->ReleaseStringUTFChars(jchat, chat);
     env->ReleaseStringUTFChars(jsender, sender);
+    signal_handle_message_async(psm);
+}
+
+JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_askRegisterOrLink(JNIEnv *env, jclass cls, jlong pc) {
+    PurpleSignalMessage *psm = new PurpleSignalMessage();
+    psm->pc = pc;
+    psm->function = std::make_unique<PurpleSignalConnectionFunction>(
+        [] (PurpleConnection *pc) {
+            signal_ask_register_or_link(pc);
+        }
+    );
     signal_handle_message_async(psm);
 }
 
@@ -233,10 +246,13 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_logNatively(JNI
     env->ReleaseStringUTFChars(jmessage, message);
 }
 
-int purplesignal_send(TypedJNIEnv *sjvm, PurpleSignal *ps, uintptr_t pc, const char *who, const char *message) {
-    if (sjvm == nullptr || ps->send_message == nullptr) {
-        purplesignal_error(pc, PURPLE_DEBUG_ERROR, "PurpleSignal has not been initialized.");
-        return 1;
+int purplesignal_send(TypedJNIEnv *sjvm, PurpleSignal & ps, const char *who, const char *message) {
+    if (sjvm == nullptr || ps.send_message == nullptr) {
+        throw std::runtime_error("PurpleSignal has not been initialized.");
     }
-    return ps->send_message(sjvm->make_jstring(who), sjvm->make_jstring(message));
+    return ps.send_message(sjvm->make_jstring(who), sjvm->make_jstring(message));
+}
+
+void purplesignal_link(TypedJNIEnv *signaljvm, PurpleSignal & ps) {
+    ps.instance->GetMethod<void()>("linkAccount")();
 }

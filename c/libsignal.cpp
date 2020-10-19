@@ -109,6 +109,41 @@ signal_process_error(PurpleConnection *pc, const PurpleDebugLevel level, const s
     purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, message.c_str());
 }
 
+const int SIGNAL_ACCOUNT_LINK = 0;
+const int SIGNAL_ACCOUNT_REGISTER = 1;
+
+void
+signal_ask_register_or_link_ok_cb(PurpleConnection *pc, int choice) {
+    SignalAccount *sa = static_cast<SignalAccount *>(purple_connection_get_protocol_data(pc));
+    if (choice == SIGNAL_ACCOUNT_LINK) {
+        purplesignal_link(signaljvm, sa->ps);
+    } else {
+        purple_connection_error(pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, "Registering not implemented.");
+    }
+}
+
+void
+signal_ask_register_or_link_cancel_cb(PurpleConnection *pc, int choice) {
+    purple_connection_error(pc, PURPLE_CONNECTION_ERROR_INVALID_USERNAME, "Cannot continue without account.");
+}
+
+void
+signal_ask_register_or_link(PurpleConnection *pc) {
+    SignalAccount *sa = static_cast<SignalAccount *>(purple_connection_get_protocol_data(pc));
+    purple_request_choice(
+        pc, 
+        "Unknown account", "Please choose",
+        NULL, 0,
+        "OK", G_CALLBACK(signal_ask_register_or_link_ok_cb),
+        "Cancel", G_CALLBACK(signal_ask_register_or_link_cancel_cb),
+        sa->account, NULL, NULL, 
+        pc, 
+        "Link to existing account", SIGNAL_ACCOUNT_LINK, 
+        "Register new", SIGNAL_ACCOUNT_REGISTER, 
+        NULL
+    );
+}
+
 extern "C" {
 
 static const char *
@@ -202,7 +237,12 @@ static int
 signal_send_im(PurpleConnection *pc, const gchar *who, const gchar *message, PurpleMessageFlags flags)
 {
     SignalAccount *sa = (SignalAccount *)purple_connection_get_protocol_data(pc);
-    return purplesignal_send(signaljvm, &sa->ps, (uintptr_t)pc, who, message);
+    try {
+        return purplesignal_send(signaljvm, sa->ps, who, message);
+    } catch (std::exception & e) {
+        purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, e.what());
+        return -1;
+    }
 }
 
 static void
