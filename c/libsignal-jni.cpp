@@ -135,6 +135,14 @@ void purplesignal_destroy(TypedJNIEnv * & sjvm) {
     if (sjvm == nullptr) {
         signal_debug(PURPLE_DEBUG_INFO, "Pointer already NULL during purplesignal_destroy(). Assuming no JVM ever started.");
     } else {
+		try {
+			// TODO: find PurpleSignal class only once, keep as global reference?
+			TypedJNIClass psclass = sjvm->find_class("de/hehoe/purple_signal/PurpleSignal");
+			signal_debug(PURPLE_DEBUG_INFO, "Waiting for all remaining Java threads…");
+			psclass.GetStaticMethod<void()>("joinAllThreads")();
+		} catch (std::exception & e) {
+			signal_debug(PURPLE_DEBUG_INFO, std::string("Exception while waiting for Java threads: ") + e.what());
+		}
         delete sjvm;
         sjvm = nullptr;
     }
@@ -161,11 +169,9 @@ char * get_exception_message(JNIEnv *env, const char * fallback_message) {
 
 char *purplesignal_login(TypedJNIEnv* sjvm, PurpleSignal *ps, uintptr_t connection, const char* username, const char * settings_dir) {
     try {
-        ps->psclass = std::make_unique<TypedJNIClass>(
-            sjvm->find_class("de/hehoe/purple_signal/PurpleSignal")
-        );
+        TypedJNIClass psclass = sjvm->find_class("de/hehoe/purple_signal/PurpleSignal");
         ps->instance = std::make_unique<TypedJNIObject>(
-            ps->psclass->GetConstructor<jlong,jstring,jstring>()(
+            psclass.GetConstructor<jlong,jstring,jstring>()(
                 connection, sjvm->make_jstring(username), sjvm->make_jstring(settings_dir)
             )
         );
