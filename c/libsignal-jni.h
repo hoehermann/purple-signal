@@ -1,7 +1,20 @@
-#include "typedjni.hpp"
-#include "libsignal.h"
-#include <stdint.h>
+#pragma once
+
 #include <memory>
+#include <purple.h>
+#include <stdint.h>
+#include "typedjni.hpp"
+
+typedef std::function<void(PurpleConnection *pc)> PurpleSignalConnectionFunction;
+
+class PurpleSignalMessage {
+    public:
+    const uintptr_t pc;
+    const std::unique_ptr<PurpleSignalConnectionFunction> function;
+    PurpleSignalMessage(const PurpleSignalMessage&) = delete;
+    PurpleSignalMessage& operator=(const PurpleSignalMessage&) = delete;
+    PurpleSignalMessage(uintptr_t pc, std::unique_ptr<PurpleSignalConnectionFunction> & function);
+};
 
 typedef struct {
     std::unique_ptr<TypedJNIObject> instance; // reference to this connection's PurpleSignal (Java) instance.

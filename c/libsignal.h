@@ -1,17 +1,18 @@
+#pragma once
+
 #include <purple.h>
+#include "libsignal-jni.h"
 #include <memory>
 #include <functional>
 
-typedef std::function<void(PurpleConnection *pc)> PurpleSignalConnectionFunction;
-
-class PurpleSignalMessage {
-    public:
-    const uintptr_t pc;
-    const std::unique_ptr<PurpleSignalConnectionFunction> function;
-    PurpleSignalMessage(const PurpleSignalMessage&) = delete;
-    PurpleSignalMessage& operator=(const PurpleSignalMessage&) = delete;
-    PurpleSignalMessage(uintptr_t pc, std::unique_ptr<PurpleSignalConnectionFunction> & function);
-};
+/*
+ * Holds all information related to this account (connection) instance.
+ */
+typedef struct {
+    PurpleAccount *account;
+    PurpleConnection *pc;
+    PurpleSignal ps;
+} SignalAccount;
 
 void signal_process_error(PurpleConnection *pc, const PurpleDebugLevel level, const std::string & message);
 void signal_process_message(PurpleConnection *pc, const std::string & chat, const std::string & sender, const std::string & message, const long timestamp, const PurpleMessageFlags flags);

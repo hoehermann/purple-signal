@@ -1,4 +1,5 @@
 #include "libsignal-jni.h"
+#include "libsignal.h"
 #include <stdlib.h>
 #include <string.h>
 #include <glib.h>

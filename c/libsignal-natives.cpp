@@ -4,8 +4,22 @@
  * They should defer their work to the appropriate functions to be handled in Pidgin's main thread.
  */
 
-#include "libsignal-jni.h"
 #include "de_hehoe_purple_signal_PurpleSignal.h"
+#include "libsignal.h"
+#include "libsignal-jni.h"
+#include "libsignal-link.h"
+
+JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleQRCodeNatively(JNIEnv *env, jclass cls, jlong pc, jstring jmessage) {
+    const char *message = env->GetStringUTFChars(jmessage, 0);
+    auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
+            [device_link_uri = std::string(message)] (PurpleConnection *pc) {
+                signal_generate_and_show_qr_code(pc, device_link_uri);
+            }
+        );
+    env->ReleaseStringUTFChars(jmessage, message);
+    PurpleSignalMessage *psm = new PurpleSignalMessage(pc, do_in_main_thread);
+    signal_handle_message_async(psm);
+}
 
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_askRegisterOrLinkNatively(JNIEnv *env, jclass cls, jlong pc) {
     auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(

@@ -35,8 +35,6 @@
 #error Purple3 not supported.
 #endif
 
-#include "libsignal-jni.h"
-
 #define SIGNAL_PLUGIN_ID "prpl-hehoe-signal"
 #ifndef SIGNAL_PLUGIN_VERSION
 #error Must set SIGNAL_PLUGIN_VERSION in Makefile
@@ -52,14 +50,7 @@
 #define SIGNAL_OPTION_SETTINGS_DIR "signal-cli-settings-dir"
 #define SIGNAL_DEFAULT_SETTINGS_DIR ""
 
-/*
- * Holds all information related to this account (connection) instance.
- */
-typedef struct {
-    PurpleAccount *account;
-    PurpleConnection *pc;
-    PurpleSignal ps;
-} SignalAccount;
+#include "libsignal.h"
 
 TypedJNIEnv *signaljvm = nullptr; // only one Java VM over all connections
 
