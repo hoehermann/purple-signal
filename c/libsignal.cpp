@@ -399,7 +399,7 @@ signal_handle_message_mainthread(gpointer data)
     } else {
         (*psm->function)(pc);
     }
-    g_free(psm);
+    delete psm;
     return FALSE;
 }
 

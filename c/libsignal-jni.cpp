@@ -48,13 +48,12 @@ char *find_own_path() {
 
 void purplesignal_error(uintptr_t pc, PurpleDebugLevel level, std::string message) {
     /*assert(level > 0);*/
-    PurpleSignalMessage *psm = new PurpleSignalMessage;
-    psm->pc = pc;
-    psm->function = std::make_unique<PurpleSignalConnectionFunction>(
+    auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
         [level, message] (PurpleConnection *pc) {
             signal_process_error(pc, level, message);
         }
     );
+    PurpleSignalMessage *psm = new PurpleSignalMessage(pc, do_in_main_thread);
     signal_handle_message_async(psm);
 }
 
@@ -200,9 +199,7 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNa
     const char *chat = env->GetStringUTFChars(jchat, 0);
     const char *sender = env->GetStringUTFChars(jsender, 0);
     const char *message = env->GetStringUTFChars(jmessage, 0);
-    PurpleSignalMessage *psm = new PurpleSignalMessage();
-    psm->pc = pc;
-    psm->function = std::make_unique<PurpleSignalConnectionFunction>(
+    auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
         [
             chat = std::string(chat), 
             sender = std::string(sender), 
@@ -213,6 +210,7 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNa
             signal_process_message(pc, chat, sender, message, timestamp, flags);
         }
     );
+    PurpleSignalMessage *psm = new PurpleSignalMessage(pc, do_in_main_thread);
     env->ReleaseStringUTFChars(jmessage, message);
     env->ReleaseStringUTFChars(jchat, chat);
     env->ReleaseStringUTFChars(jsender, sender);
@@ -220,13 +218,12 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNa
 }
 
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_askRegisterOrLink(JNIEnv *env, jclass cls, jlong pc) {
-    PurpleSignalMessage *psm = new PurpleSignalMessage();
-    psm->pc = pc;
-    psm->function = std::make_unique<PurpleSignalConnectionFunction>(
-        [] (PurpleConnection *pc) {
-            signal_ask_register_or_link(pc);
-        }
-    );
+    auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
+            [] (PurpleConnection *pc) {
+                signal_ask_register_or_link(pc);
+            }
+        );
+    PurpleSignalMessage *psm = new PurpleSignalMessage(pc, do_in_main_thread);
     signal_handle_message_async(psm);
 }
 
@@ -252,3 +249,5 @@ int purplesignal_send(TypedJNIEnv *sjvm, PurpleSignal & ps, const char *who, con
 void purplesignal_link(TypedJNIEnv *signaljvm, PurpleSignal & ps) {
     ps.instance->GetMethod<void()>("linkAccount")();
 }
+
+PurpleSignalMessage::PurpleSignalMessage(uintptr_t pc, std::unique_ptr<PurpleSignalConnectionFunction> & function) : pc(pc), function(std::move(function)) {};

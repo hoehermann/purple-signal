@@ -4,10 +4,14 @@
 
 typedef std::function<void(PurpleConnection *pc)> PurpleSignalConnectionFunction;
 
-typedef struct {
-    uintptr_t pc;
-    std::unique_ptr<PurpleSignalConnectionFunction> function;
-} PurpleSignalMessage;
+class PurpleSignalMessage {
+    public:
+    const uintptr_t pc;
+    const std::unique_ptr<PurpleSignalConnectionFunction> function;
+    PurpleSignalMessage(const PurpleSignalMessage&) = delete;
+    PurpleSignalMessage& operator=(const PurpleSignalMessage&) = delete;
+    PurpleSignalMessage(uintptr_t pc, std::unique_ptr<PurpleSignalConnectionFunction> & function);
+};
 
 void signal_process_error(PurpleConnection *pc, const PurpleDebugLevel level, const std::string & message);
 void signal_process_message(PurpleConnection *pc, const std::string & chat, const std::string & sender, const std::string & message, const long timestamp, const PurpleMessageFlags flags);

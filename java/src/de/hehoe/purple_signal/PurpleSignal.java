@@ -113,19 +113,15 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			logNatively(DEBUG_LEVEL_INFO, "Using registered user " + manager.getUsername());
 		} else {
 			logNatively(DEBUG_LEVEL_INFO, "User does not exist. Asking about how to continue…");
-			askRegisterOrLink(this.connection);
+			askRegisterOrLinkNatively(this.connection);
 		}
 	}
 	
 	public void linkAccount() {
 		this.provisioningManager = new ProvisioningManager(settingsPath, serviceConfiguration, USER_AGENT);
-		String deviceLinkUri;
 		try {
-			deviceLinkUri = this.provisioningManager.getDeviceLinkUri();
-			handleMessageNatively(this.connection, "link", this.username,
-					"Please use this code to link this Pidgin account (use a QR encoder for linking with real phones):<br/>"
-							+ deviceLinkUri,
-					0, PURPLE_MESSAGE_NICK);
+			String deviceLinkUri = this.provisioningManager.getDeviceLinkUri();
+			handleQRCodeNatively(this.connection, deviceLinkUri);
 		} catch (TimeoutException | IOException e) {
 			handleErrorNatively(this.connection, "Unable to generate device link uri: " + e.getMessage());
 			e.printStackTrace();
@@ -558,5 +554,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
 	public static native void handleErrorNatively(long connection, String error);
 	
-	public static native void askRegisterOrLink(long connection);
+	public static native void askRegisterOrLinkNatively(long connection);
+	
+	public static native void handleQRCodeNatively(long connection, String deviceLinkUri);
 }
