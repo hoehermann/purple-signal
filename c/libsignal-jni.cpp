@@ -17,7 +17,9 @@ char *find_own_path() {
     const DWORD nSize = 1024;
     char lpFilename[nSize];
     if (GetModuleFileName(GetModuleHandle(OWN_FILE_NAME), lpFilename, nSize) > 0) {
+        // TODO: switch to C++ version of dirname
         char *path = dirname(g_strdup(lpFilename));
+        // convert backslashes to slashes as Java expects
         for (char *p = path; *p != 0; p++) {
             if (*p == '\\') {
                 *p = '/';
@@ -150,40 +152,34 @@ void purplesignal_destroy(TypedJNIEnv * & sjvm) {
     }
 }
 
-char * get_exception_message(JNIEnv *env, const char * fallback_message) {
-    if (false && env->ExceptionCheck()) {
-        /*
-        jthrowable jexception;
-        jexception = env->ExceptionOccurred();
+void purplesignal_exception_check(TypedJNIEnv *tenv) {
+    if (tenv->env->ExceptionCheck()) {
+        jthrowable jexception = tenv->env->ExceptionOccurred();
+        jstring jstr = TypedJNIMethod<jstring()>::get(
+            tenv->env, 
+            tenv->find_class("java/lang/Object").cls, 
+            jexception, 
+            "toString"
+        )();
         jboolean isCopy = 0;
-        jclass jcls = env->FindClass("java/lang/Object");
-        jmethodID toString = env->GetMethodID(jcls, "toString", "()Ljava/lang/String;");
-        jstring jstr = env->CallObjectMethod(jexception, toString);
-        const char * utf = env->GetStringUTFChars(jstr, &isCopy);
-        char * errmsg = g_strdup(utf);
-        env->ReleaseStringUTFChars(jstr, utf);
-        return errmsg;
-        */
-    } else {
-        return g_strdup(fallback_message);
+        const char * utf = tenv->env->GetStringUTFChars(jstr, &isCopy);
+        std::string errmsg(utf);
+        tenv->env->ReleaseStringUTFChars(jstr, utf);
+        throw std::runtime_error(errmsg);
     }
 }
 
-char *purplesignal_login(TypedJNIEnv* sjvm, PurpleSignal *ps, uintptr_t connection, const char* username, const char * settings_dir) {
-    try {
-        TypedJNIClass psclass = sjvm->find_class("de/hehoe/purple_signal/PurpleSignal");
-        ps->instance = std::make_unique<TypedJNIObject>(
-            psclass.GetConstructor<jlong,jstring,jstring>()(
-                connection, sjvm->make_jstring(username), sjvm->make_jstring(settings_dir)
-            )
-        );
-        ps->send_message = ps->instance->GetMethod<jint(jstring,jstring)>("sendMessage");
-        //signal_debug(PURPLE_DEBUG_INFO, "Starting background thread…");
-        //ps->instance->GetMethod<void(void)>("startReceiving")();
-        return NULL;
-    } catch (std::exception & e) {
-        return get_exception_message(sjvm->env, e.what());
-    }
+void purplesignal_login(TypedJNIEnv* sjvm, PurpleSignal *ps, uintptr_t connection, const char* username, const char * settings_dir) {
+    TypedJNIClass psclass = sjvm->find_class("de/hehoe/purple_signal/PurpleSignal");
+    ps->instance = std::make_unique<TypedJNIObject>(
+        psclass.GetConstructor<jlong,jstring,jstring>()(
+            connection, sjvm->make_jstring(username), sjvm->make_jstring(settings_dir)
+        )
+    );
+    ps->send_message = ps->instance->GetMethod<jint(jstring,jstring)>("sendMessage");
+    //signal_debug(PURPLE_DEBUG_INFO, "Starting background thread…");
+    //ps->instance->GetMethod<void(void)>("startReceiving")();
+    purplesignal_exception_check(sjvm);
 }
 
 int purplesignal_close(const PurpleSignal & ps) {

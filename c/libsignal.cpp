@@ -193,18 +193,17 @@ signal_login(PurpleAccount *account)
     const char * settings_dir_format = purple_account_get_string(account, SIGNAL_OPTION_SETTINGS_DIR, SIGNAL_DEFAULT_SETTINGS_DIR);
     char * settings_dir = g_strdup_printf(settings_dir_format, purple_user_dir());
     purple_connection_set_state(pc, PURPLE_CONNECTION_CONNECTING);
-    char *error = purplesignal_login(
-        signaljvm, &sa->ps, (uintptr_t)pc, 
-        purple_account_get_username(account),
-        settings_dir
-    );
-    g_free(settings_dir);
-    if (error) {
-        purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, error);
-        g_free(error);
-    } else {
+    try {
+        purplesignal_login(
+            signaljvm, &sa->ps, (uintptr_t)pc, 
+            purple_account_get_username(account),
+            settings_dir
+        );
         purple_connection_set_state(pc, PURPLE_CONNECTION_CONNECTED);
+    } catch (std::exception & e) {
+        purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, e.what());
     }
+    g_free(settings_dir);
 }
 
 static void

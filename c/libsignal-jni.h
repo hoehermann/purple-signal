@@ -11,7 +11,7 @@ typedef struct {
 char *purplesignal_init(const char *signal_cli_path, TypedJNIEnv * & sjvm);
 void purplesignal_destroy(TypedJNIEnv * & ps);
 
-char *purplesignal_login(TypedJNIEnv *signaljvm, PurpleSignal *ps, uintptr_t connection, const char *username, const char *settings_directory);
+void purplesignal_login(TypedJNIEnv *signaljvm, PurpleSignal *ps, uintptr_t connection, const char *username, const char *settings_directory);
 int purplesignal_close(const PurpleSignal & ps);
 int purplesignal_send(TypedJNIEnv *signaljvm, PurpleSignal & ps, const char *who, const char *message);
 void purplesignal_link(TypedJNIEnv *signaljvm, PurpleSignal & ps);
