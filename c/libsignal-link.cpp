@@ -1,7 +1,11 @@
+#include <sstream>
+#include "QR-Code-generator/cpp/QrCode.hpp"
+
 #include "libsignal-link.h"
 #include "libsignal.h"
 
-void signal_show_qr_code(PurpleConnection *pc, const std::string & qr_raw_data, const std::string & qr_code_ppm) {
+
+void signal_show_qr_code(PurpleConnection *pc, const std::string & qr_code_ppm, const std::string & qr_raw_data) {
     SignalAccount *sa = static_cast<SignalAccount *>(purple_connection_get_protocol_data(pc));
 
     PurpleRequestFields *fields = purple_request_fields_new();
@@ -31,6 +35,19 @@ void signal_show_qr_code(PurpleConnection *pc, const std::string & qr_raw_data, 
     );
 }
 
-void signal_generate_and_show_qr_code(PurpleConnection *pc, const std::string & device_link_uri) {
-    signal_show_qr_code(pc, device_link_uri, "");
+std::string signal_generate_qr_code(const std::string & device_link_uri, int zoom_factor) {
+    qrcodegen::QrCode qr1 = qrcodegen::QrCode::encodeText(device_link_uri.c_str(), qrcodegen::QrCode::Ecc::MEDIUM);
+    std::ostringstream oss;
+    oss << "P1\n" << qr1.getSize()*zoom_factor << " " << qr1.getSize()*zoom_factor << "\n";
+    for (int y = 0; y < qr1.getSize(); y++) {
+        for (int yz = 0; yz < zoom_factor; yz++) {
+            for (int x = 0; x < qr1.getSize(); x++) {
+                for (int xz = 0; xz < zoom_factor; xz++) {
+                    oss << qr1.getModule(x, y) << " ";
+                }
+            }
+            oss << "\n";
+        }
+    }
+    return oss.str();
 }

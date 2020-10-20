@@ -13,7 +13,9 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleQRCodeNat
     const char *message = env->GetStringUTFChars(jmessage, 0);
     auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
             [device_link_uri = std::string(message)] (PurpleConnection *pc) {
-                signal_generate_and_show_qr_code(pc, device_link_uri);
+                const int zoom_factor = 4; // TODO: make this user-configurable
+                std::string qr_code_data = signal_generate_qr_code(device_link_uri, zoom_factor);
+                signal_show_qr_code(pc, qr_code_data, device_link_uri);
             }
         );
     env->ReleaseStringUTFChars(jmessage, message);

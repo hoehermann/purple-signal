@@ -22,8 +22,11 @@ set(SRC_LIST
     libsignal-natives.cpp
     libsignal-link.h
     libsignal-link.cpp
+    # TODO: submodule these
     typedjni.hpp
     typedjni.cpp
+    QR-Code-generator/cpp/QrCode.cpp
+    QR-Code-generator/cpp/QrCode.hpp
     )
 
 set(TARGET_NAME ${PROJECT_NAME})
