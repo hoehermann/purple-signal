@@ -416,8 +416,3 @@ signal_handle_message_async(PurpleSignalMessage *psm)
 void signal_debug(PurpleDebugLevel level, const std::string & message) {
     purple_debug(level, "signal", "%s\n", message.c_str());
 }
-
-void signal_debug_async(PurpleDebugLevel level, const char *message) {
-    // debug logging can happen asynchronously
-    signal_debug(level, message);
-}

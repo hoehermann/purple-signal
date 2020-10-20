@@ -19,6 +19,7 @@ set(SRC_LIST
     libsignal.cpp
     libsignal-jni.h
     libsignal-jni.cpp
+    libsignal-natives.cpp
     typedjni.hpp
     typedjni.cpp
     )

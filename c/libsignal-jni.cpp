@@ -1,5 +1,4 @@
 #include "libsignal-jni.h"
-#include "de_hehoe_purple_signal_PurpleSignal.h"
 #include <stdlib.h>
 #include <string.h>
 #include <glib.h>
@@ -46,17 +45,6 @@ char *find_own_path() {
 }
 #endif
 
-void purplesignal_error(uintptr_t pc, PurpleDebugLevel level, std::string message) {
-    /*assert(level > 0);*/
-    auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
-        [level, message] (PurpleConnection *pc) {
-            signal_process_error(pc, level, message);
-        }
-    );
-    PurpleSignalMessage *psm = new PurpleSignalMessage(pc, do_in_main_thread);
-    signal_handle_message_async(psm);
-}
-
 char *readdir_of_jars(const char *path, const char *prefix) {
     int signal_cli_jar_found = FALSE;
     char *out = NULL;
@@ -91,7 +79,7 @@ char *readdir_of_jars(const char *path, const char *prefix) {
 
 char *purplesignal_init(const char *signal_cli_path, TypedJNIEnv *&sjvm) {
     if (sjvm != nullptr) {
-        signal_debug_async(PURPLE_DEBUG_INFO, "jni pointers not null. JVM seems to be initialized already.");
+        signal_debug(PURPLE_DEBUG_INFO, "jni pointers not null. JVM seems to be initialized already.");
         return NULL;
     } else {
         char *ownpath = find_own_path();
@@ -102,8 +90,8 @@ char *purplesignal_init(const char *signal_cli_path, TypedJNIEnv *&sjvm) {
         g_free(prefix);
         char *librarypath = g_strdup_printf("-Djava.library.path=%s", ownpath);
         g_free(ownpath);
-        signal_debug_async(PURPLE_DEBUG_INFO, classpath);
-        signal_debug_async(PURPLE_DEBUG_INFO, librarypath);
+        signal_debug(PURPLE_DEBUG_INFO, classpath);
+        signal_debug(PURPLE_DEBUG_INFO, librarypath);
         if (classpath[0] != '-') {
             // if classpath does not start with a minus, it contains an error message
             g_free(librarypath);
@@ -215,28 +203,6 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNa
     env->ReleaseStringUTFChars(jchat, chat);
     env->ReleaseStringUTFChars(jsender, sender);
     signal_handle_message_async(psm);
-}
-
-JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_askRegisterOrLink(JNIEnv *env, jclass cls, jlong pc) {
-    auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
-            [] (PurpleConnection *pc) {
-                signal_ask_register_or_link(pc);
-            }
-        );
-    PurpleSignalMessage *psm = new PurpleSignalMessage(pc, do_in_main_thread);
-    signal_handle_message_async(psm);
-}
-
-JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleErrorNatively(JNIEnv *env, jclass cls, jlong pc, jstring jmessage) {
-    const char *message = env->GetStringUTFChars(jmessage, 0);
-    purplesignal_error(pc, PURPLE_DEBUG_ERROR, message);
-    env->ReleaseStringUTFChars(jmessage, message);
-}
-
-JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_logNatively(JNIEnv *env, jclass cls, jint level, jstring jmessage) {
-    const char *message = env->GetStringUTFChars(jmessage, 0);
-    signal_debug_async(static_cast<PurpleDebugLevel>(level), message);
-    env->ReleaseStringUTFChars(jmessage, message);
 }
 
 int purplesignal_send(TypedJNIEnv *sjvm, PurpleSignal & ps, const char *who, const char *message) {

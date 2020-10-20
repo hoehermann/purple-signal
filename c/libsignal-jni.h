@@ -18,5 +18,4 @@ void purplesignal_link(TypedJNIEnv *signaljvm, PurpleSignal & ps);
 
 // defined by libsignal.cpp
 void signal_handle_message_async(PurpleSignalMessage *psm);
-void signal_debug_async(PurpleDebugLevel level, const char *message);
 void signal_debug(PurpleDebugLevel level, const std::string & message);
