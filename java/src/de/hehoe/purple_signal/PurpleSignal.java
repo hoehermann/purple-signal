@@ -34,6 +34,7 @@ import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
 import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
@@ -43,7 +44,6 @@ import org.asamk.signal.util.GroupIdFormatException;
 public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
 	private Manager manager = null;
-	private ProvisioningManager provisioningManager = null;
 	private long connection = 0;
 	private boolean keepReceiving = false;
 	private Thread receiverThread = null;
@@ -75,13 +75,17 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 				f.mkdirs();
 			}
 		}
+		this.manager = Manager.init(this.username, settingsDir, serviceConfiguration, USER_AGENT);
 		if (SignalAccount.userExists(dataPath, this.username)) {
-			this.manager = Manager.init(this.username, settingsDir, serviceConfiguration, USER_AGENT);
 			if (!this.manager.isRegistered()) {
-				throw new IllegalStateException("User is not registered but exists at " + dataPath
-						+ ". Either link successfully or register and verify with signal-cli.");
+				askRegisterOrLinkNatively(this.connection);
+			} else {
+				try {
+					this.manager.checkAccountState();
+				} catch (AuthorizationFailedException e) {
+					askRegisterOrLinkNatively(this.connection);
+				}
 			}
-			this.manager.checkAccountState();
 			logNatively(DEBUG_LEVEL_INFO, "Using registered user " + manager.getUsername());
 		} else {
 			logNatively(DEBUG_LEVEL_INFO, "User does not exist. Asking about how to continue…");
@@ -89,26 +93,15 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		}
 	}
 	
-	public void linkAccount() {
-		this.provisioningManager = new ProvisioningManager(settingsPath, serviceConfiguration, USER_AGENT);
-		try {
-			String deviceLinkUri = this.provisioningManager.getDeviceLinkUri();
-			handleQRCodeNatively(this.connection, deviceLinkUri);
-		} catch (TimeoutException | IOException e) {
-			handleErrorNatively(this.connection, "Unable to generate device link uri: " + e.getMessage());
-			e.printStackTrace();
-		}
-	}
-	
-	public void registerAccount(boolean voiceVerification) throws IOException {
-		this.manager.register(voiceVerification);
-	}
-
-	public void run() {
-		if (this.provisioningManager != null) {
+	public void linkAccount() throws TimeoutException, IOException {
+		ProvisioningManager provisioningManager = new ProvisioningManager(settingsPath, serviceConfiguration,
+				USER_AGENT);
+		String deviceLinkUri = provisioningManager.getDeviceLinkUri();
+		handleQRCodeNatively(this.connection, deviceLinkUri);
+		receiverThread = new Thread(() -> {
 			String linkedUsername = null;
 			try {
-				linkedUsername = this.provisioningManager.finishDeviceLink("purple-signal");
+				linkedUsername = provisioningManager.finishDeviceLink("purple-signal");
 			} catch (IOException | InvalidKeyException | TimeoutException | UserAlreadyExists e) {
 				handleErrorNatively(this.connection, "Unable to finish device link: " + e.getMessage());
 				e.printStackTrace();
@@ -119,27 +112,36 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			} else {
 				handleErrorNatively(this.connection, "Linking finished. Reconnect needed.");
 			}
-			this.provisioningManager = null;
-		} else {
-			boolean ignoreAttachments = true;
-			boolean returnOnTimeout = true; // it looks like setting this to false means "listen for new messages
-											// forever".
-			// There seems to be a non-daemon thread to be involved somewhere as the Java VM
-			// will not ever shut down.
-			long timeout = 60; // Seconds to wait for an incoming message. After the timeout occurred, a
-								// re-connect happens silently.
-			// TODO: Find out how this affects what.
-			try {
-				while (this.keepReceiving) {
-					this.manager.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout,
-							ignoreAttachments, this);
-				}
-			} catch (Exception e) {
-				handleErrorNatively(this.connection, "Exception while waiting for message: " + e.getMessage());
-			} catch (Throwable t) {
-				handleErrorNatively(this.connection, "Unhandled exception while waiting for message.");
-				t.printStackTrace();
+
+		});
+		receiverThread.setName("finishDeviceLink");
+		receiverThread.setDaemon(true);
+		receiverThread.start();
+	}
+	
+	public void registerAccount(boolean voiceVerification) throws IOException {
+		this.manager.register(voiceVerification);
+	}
+
+	public void run() {
+		boolean ignoreAttachments = true;
+		boolean returnOnTimeout = true; // it looks like setting this to false means "listen for new messages
+										// forever".
+		// There seems to be a non-daemon thread to be involved somewhere as the Java VM
+		// will not ever shut down.
+		long timeout = 60; // Seconds to wait for an incoming message. After the timeout occurred, a
+							// re-connect happens silently.
+		// TODO: Find out how this affects what.
+		try {
+			while (this.keepReceiving) {
+				this.manager.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout,
+						ignoreAttachments, this);
 			}
+		} catch (Exception e) {
+			handleErrorNatively(this.connection, "Exception while waiting for message: " + e.getMessage());
+		} catch (Throwable t) {
+			handleErrorNatively(this.connection, "Unhandled exception while waiting for message.");
+			t.printStackTrace();
 		}
 		logNatively(DEBUG_LEVEL_INFO, "RECEIVING DONE");
 	}

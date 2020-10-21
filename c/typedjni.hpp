@@ -14,6 +14,8 @@ std::string GetTypeString(){
 template <>
 std::string GetTypeString<jstring>();
 template <>
+std::string GetTypeString<jboolean>();
+template <>
 std::string GetTypeString<jint>();
 template <>
 std::string GetTypeString<jlong>();

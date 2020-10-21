@@ -109,7 +109,7 @@ signal_ask_register_or_link_ok_cb(PurpleConnection *pc, int choice) {
     if (choice == SIGNAL_ACCOUNT_LINK) {
         purplesignal_link(signaljvm, sa->ps);
     } else {
-        purple_connection_error(pc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, "Registering not implemented.");
+        purplesignal_register(signaljvm, sa->ps, false);
     }
 }
 

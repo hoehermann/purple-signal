@@ -170,6 +170,15 @@ void purplesignal_login(TypedJNIEnv* sjvm, PurpleSignal *ps, uintptr_t connectio
     purplesignal_exception_check(sjvm);
 }
 
+void purplesignal_register(TypedJNIEnv* sjvm, PurpleSignal & ps, bool voice) {
+    try {
+        ps.instance->GetMethod<void(jboolean)>("registerAccount")(voice);
+        purplesignal_exception_check(sjvm);
+    } catch (std::exception & e) {
+        signal_debug(PURPLE_DEBUG_ERROR, e.what());
+    }
+}
+
 int purplesignal_close(const PurpleSignal & ps) {
     if (ps.instance == nullptr) {
         signal_debug(PURPLE_DEBUG_INFO, "Pointer already NULL during purplesignal_close(). Assuming no connection ever made.");
@@ -213,8 +222,13 @@ int purplesignal_send(TypedJNIEnv *sjvm, PurpleSignal & ps, const char *who, con
     return ps.send_message(sjvm->make_jstring(who), sjvm->make_jstring(message));
 }
 
-void purplesignal_link(TypedJNIEnv *signaljvm, PurpleSignal & ps) {
-    ps.instance->GetMethod<void()>("linkAccount")();
+void purplesignal_link(TypedJNIEnv *sjvm, PurpleSignal & ps) {
+    try {
+        ps.instance->GetMethod<void()>("linkAccount")();
+        purplesignal_exception_check(sjvm);
+    } catch (std::exception & e) {
+        signal_debug(PURPLE_DEBUG_ERROR, e.what());
+    }
 }
 
 PurpleSignalMessage::PurpleSignalMessage(uintptr_t pc, std::unique_ptr<PurpleSignalConnectionFunction> & function) : pc(pc), function(std::move(function)) {};

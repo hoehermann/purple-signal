@@ -3,6 +3,8 @@
 template <>
 std::string TypedJNI::GetTypeString<jstring>(){return "Ljava/lang/String;";};
 template <>
+std::string TypedJNI::GetTypeString<jboolean>(){return "Z";};
+template <>
 std::string TypedJNI::GetTypeString<jint>(){return "I";};
 template <>
 std::string TypedJNI::GetTypeString<jlong>(){return "J";};
