@@ -121,6 +121,11 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	
 	public void registerAccount(boolean voiceVerification) throws IOException {
 		this.manager.register(voiceVerification);
+		askVerificationCodeNatively(this.connection);
+	}
+	
+	public void verifyAccount(String verificationCode, String pin) throws IOException {
+		this.manager.verifyAccount(verificationCode, pin);
 	}
 
 	public void run() {
@@ -535,4 +540,6 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	public static native void askRegisterOrLinkNatively(long connection);
 	
 	public static native void handleQRCodeNatively(long connection, String deviceLinkUri);
+	
+	public static native void askVerificationCodeNatively(long connection);
 }

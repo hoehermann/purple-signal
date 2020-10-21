@@ -33,6 +33,16 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_askRegisterOrLi
     signal_handle_message_async(psm);
 }
 
+JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_askVerificationCodeNatively(JNIEnv *env, jclass cls, jlong pc) {
+    auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
+            [] (PurpleConnection *pc) {
+                signal_ask_verification_code(pc);
+            }
+        );
+    PurpleSignalMessage *psm = new PurpleSignalMessage(pc, do_in_main_thread);
+    signal_handle_message_async(psm);
+}
+
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleErrorNatively(JNIEnv *env, jclass cls, jlong pc, jstring jmessage) {
     const char *message = env->GetStringUTFChars(jmessage, 0);
     auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
@@ -50,4 +60,26 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_logNatively(JNI
     // writing to the console does not involve the GTK event loop and can happen asynchronously
     signal_debug(static_cast<PurpleDebugLevel>(level), message);
     env->ReleaseStringUTFChars(jmessage, message);
+}
+
+JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNatively(JNIEnv *env, jclass cls, jlong pc, jstring jchat, jstring jsender, jstring jmessage, jlong timestamp, jint flags) {
+    const char *chat = env->GetStringUTFChars(jchat, 0);
+    const char *sender = env->GetStringUTFChars(jsender, 0);
+    const char *message = env->GetStringUTFChars(jmessage, 0);
+    auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
+        [
+            chat = std::string(chat), 
+            sender = std::string(sender), 
+            message = std::string(message), 
+            timestamp, 
+            flags = static_cast<PurpleMessageFlags>(flags)
+        ] (PurpleConnection *pc) {
+            signal_process_message(pc, chat, sender, message, timestamp, flags);
+        }
+    );
+    PurpleSignalMessage *psm = new PurpleSignalMessage(pc, do_in_main_thread);
+    env->ReleaseStringUTFChars(jmessage, message);
+    env->ReleaseStringUTFChars(jchat, chat);
+    env->ReleaseStringUTFChars(jsender, sender);
+    signal_handle_message_async(psm);
 }

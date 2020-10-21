@@ -100,17 +100,57 @@ signal_process_error(PurpleConnection *pc, const PurpleDebugLevel level, const s
     purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, message.c_str());
 }
 
+void
+signal_ask_verification_code_ok_cb(PurpleConnection *pc, const char *code) {
+    SignalAccount *sa = static_cast<SignalAccount *>(purple_connection_get_protocol_data(pc));
+    purplesignal_verify(signaljvm, sa->ps, code, "");
+}
+
+void
+signal_ask_verification_code_cancel_cb(PurpleConnection *pc, const char *code) {
+    purple_connection_error(pc, PURPLE_CONNECTION_ERROR_INVALID_USERNAME, "Cannot continue without verification.");
+}
+
+void
+signal_ask_verification_code(PurpleConnection *pc) {
+    SignalAccount *sa = static_cast<SignalAccount *>(purple_connection_get_protocol_data(pc));
+    purple_request_input(
+        pc /*handle*/, 
+        "Verification" /*title*/, 
+        "Please enter verification code" /*primary*/,
+        NULL /*secondary*/, 
+        NULL /*default_value*/, 
+        false /*multiline*/,
+        false /*masked*/, 
+        NULL /*hint*/,
+        "OK" /*ok_text*/, 
+        G_CALLBACK(signal_ask_verification_code_ok_cb),
+        "Cancel" /*cancel_text*/, 
+        G_CALLBACK(signal_ask_verification_code_cancel_cb),
+        sa->account /*account*/, 
+        NULL /*who*/, 
+        NULL /*conv*/,
+        pc /*user_data*/
+    );
+}
+
 const int SIGNAL_ACCOUNT_LINK = 0;
 const int SIGNAL_ACCOUNT_REGISTER = 1;
+const int SIGNAL_ACCOUNT_VERIFY = 2;
 
 void
 signal_ask_register_or_link_ok_cb(PurpleConnection *pc, int choice) {
     SignalAccount *sa = static_cast<SignalAccount *>(purple_connection_get_protocol_data(pc));
-    if (choice == SIGNAL_ACCOUNT_LINK) {
-        purplesignal_link(signaljvm, sa->ps);
-    } else {
-        purplesignal_register(signaljvm, sa->ps, false);
-    }
+    try {
+        switch (choice) {
+            case SIGNAL_ACCOUNT_LINK: purplesignal_link(signaljvm, sa->ps); break;
+            case SIGNAL_ACCOUNT_REGISTER: purplesignal_register(signaljvm, sa->ps, false); break;
+            case SIGNAL_ACCOUNT_VERIFY: signal_ask_verification_code(pc); break;
+            default: signal_debug(PURPLE_DEBUG_ERROR, "User dialogue returned with invalid choice.");
+        }
+    } catch (std::exception & e) {
+        purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,e.what());
+    }   
 }
 
 void
@@ -131,6 +171,7 @@ signal_ask_register_or_link(PurpleConnection *pc) {
         pc, 
         "Link to existing account", SIGNAL_ACCOUNT_LINK, 
         "Register new", SIGNAL_ACCOUNT_REGISTER, 
+        "Re-enter existing verification code", SIGNAL_ACCOUNT_VERIFY, 
         NULL
     );
 }

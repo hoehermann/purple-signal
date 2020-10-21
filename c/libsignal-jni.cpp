@@ -171,12 +171,20 @@ void purplesignal_login(TypedJNIEnv* sjvm, PurpleSignal *ps, uintptr_t connectio
 }
 
 void purplesignal_register(TypedJNIEnv* sjvm, PurpleSignal & ps, bool voice) {
-    try {
-        ps.instance->GetMethod<void(jboolean)>("registerAccount")(voice);
-        purplesignal_exception_check(sjvm);
-    } catch (std::exception & e) {
-        signal_debug(PURPLE_DEBUG_ERROR, e.what());
-    }
+    ps.instance->GetMethod<void(jboolean)>("registerAccount")(voice);
+    purplesignal_exception_check(sjvm);
+}
+
+void purplesignal_link(TypedJNIEnv *sjvm, PurpleSignal & ps) {
+    ps.instance->GetMethod<void()>("linkAccount")();
+    purplesignal_exception_check(sjvm);
+}
+
+void purplesignal_verify(TypedJNIEnv *sjvm, PurpleSignal & ps, const std::string & code, const std::string & pin) {
+    ps.instance->GetMethod<void(jstring, jstring)>("verifyAccount")(
+        sjvm->make_jstring(code), sjvm->make_jstring(pin)
+    );
+    purplesignal_exception_check(sjvm);
 }
 
 int purplesignal_close(const PurpleSignal & ps) {
@@ -193,42 +201,11 @@ int purplesignal_close(const PurpleSignal & ps) {
     return 1;
 }
 
-JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNatively(JNIEnv *env, jclass cls, jlong pc, jstring jchat, jstring jsender, jstring jmessage, jlong timestamp, jint flags) {
-    const char *chat = env->GetStringUTFChars(jchat, 0);
-    const char *sender = env->GetStringUTFChars(jsender, 0);
-    const char *message = env->GetStringUTFChars(jmessage, 0);
-    auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
-        [
-            chat = std::string(chat), 
-            sender = std::string(sender), 
-            message = std::string(message), 
-            timestamp, 
-            flags = static_cast<PurpleMessageFlags>(flags)
-        ] (PurpleConnection *pc) {
-            signal_process_message(pc, chat, sender, message, timestamp, flags);
-        }
-    );
-    PurpleSignalMessage *psm = new PurpleSignalMessage(pc, do_in_main_thread);
-    env->ReleaseStringUTFChars(jmessage, message);
-    env->ReleaseStringUTFChars(jchat, chat);
-    env->ReleaseStringUTFChars(jsender, sender);
-    signal_handle_message_async(psm);
-}
-
 int purplesignal_send(TypedJNIEnv *sjvm, PurpleSignal & ps, const char *who, const char *message) {
     if (sjvm == nullptr || ps.send_message == nullptr) {
         throw std::runtime_error("PurpleSignal has not been initialized.");
     }
     return ps.send_message(sjvm->make_jstring(who), sjvm->make_jstring(message));
-}
-
-void purplesignal_link(TypedJNIEnv *sjvm, PurpleSignal & ps) {
-    try {
-        ps.instance->GetMethod<void()>("linkAccount")();
-        purplesignal_exception_check(sjvm);
-    } catch (std::exception & e) {
-        signal_debug(PURPLE_DEBUG_ERROR, e.what());
-    }
 }
 
 PurpleSignalMessage::PurpleSignalMessage(uintptr_t pc, std::unique_ptr<PurpleSignalConnectionFunction> & function) : pc(pc), function(std::move(function)) {};

@@ -29,6 +29,7 @@ int purplesignal_close(const PurpleSignal & ps);
 int purplesignal_send(TypedJNIEnv *signaljvm, PurpleSignal & ps, const char *who, const char *message);
 void purplesignal_link(TypedJNIEnv *signaljvm, PurpleSignal & ps);
 void purplesignal_register(TypedJNIEnv *signaljvm, PurpleSignal & ps, bool voice);
+void purplesignal_verify(TypedJNIEnv *sjvm, PurpleSignal & ps, const std::string & code, const std::string & pin);
 
 // defined by libsignal.cpp
 void signal_handle_message_async(PurpleSignalMessage *psm);
