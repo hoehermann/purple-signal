@@ -157,7 +157,7 @@ void purplesignal_exception_check(TypedJNIEnv *tenv) {
     }
 }
 
-void purplesignal_login(TypedJNIEnv* sjvm, PurpleSignal *ps, uintptr_t connection, const char* username, const char * settings_dir) {
+void purplesignal_login(TypedJNIEnv* sjvm, PurpleSignal *ps, uintptr_t connection, const char* username, const std::string & settings_dir) {
     TypedJNIClass psclass = sjvm->find_class("de/hehoe/purple_signal/PurpleSignal");
     ps->instance = std::make_unique<TypedJNIObject>(
         psclass.GetConstructor<jlong,jstring,jstring>()(

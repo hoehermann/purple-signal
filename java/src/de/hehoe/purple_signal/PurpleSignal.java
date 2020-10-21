@@ -39,32 +39,8 @@ import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.util.Base64;
 import org.asamk.signal.util.GroupIdFormatException;
-import org.asamk.signal.util.IOUtils;
 
 public class PurpleSignal implements ReceiveMessageHandler, Runnable {
-
-	// stolen from signal-cli/src/main/java/org/asamk/signal/Main.java
-	/**
-	 * Uses $HOME/.local/share/signal-cli if it exists, or if none of the legacy
-	 * directories exist: - $HOME/.config/signal - $HOME/.config/textsecure
-	 *
-	 * @return the data directory to be used by signal-cli.
-	 */
-	private static String getDefaultDataPath() {
-		String dataPath = IOUtils.getDataHomeDir() + "/signal-cli";
-		if (new File(dataPath).exists()) {
-			return dataPath;
-		}
-		String legacySettingsPath = System.getProperty("user.home") + "/.config/signal";
-		if (new File(legacySettingsPath).exists()) {
-			return legacySettingsPath;
-		}
-		legacySettingsPath = System.getProperty("user.home") + "/.config/textsecure";
-		if (new File(legacySettingsPath).exists()) {
-			return legacySettingsPath;
-		}
-		return dataPath;
-	}
 
 	private Manager manager = null;
 	private ProvisioningManager provisioningManager = null;
@@ -84,19 +60,15 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		this.connection = connection;
 		this.username = username;
 		this.keepReceiving = false;
+		this.settingsPath = settingsDir;
 
 		// stolen from signald/src/main/java/io/finn/signald/Main.java
 		// Workaround for BKS truststore
 		Security.insertProviderAt(new SecurityProvider(), 1);
 		Security.addProvider(new BouncyCastleProvider());
 
-		if (!settingsDir.isEmpty()) {
-			settingsPath = settingsDir;
-		} else {
-			settingsPath = getDefaultDataPath();
-		}
-		logNatively(DEBUG_LEVEL_INFO, "Using settings path " + settingsPath);
-		String dataPath = settingsPath + "/data";
+		logNatively(DEBUG_LEVEL_INFO, "Using settings path " + settingsDir);
+		String dataPath = settingsDir + "/data";
 		{
 			File f = new File(dataPath);
 			if (!f.isDirectory()) {
@@ -104,7 +76,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			}
 		}
 		if (SignalAccount.userExists(dataPath, this.username)) {
-			this.manager = Manager.init(this.username, settingsPath, serviceConfiguration, USER_AGENT);
+			this.manager = Manager.init(this.username, settingsDir, serviceConfiguration, USER_AGENT);
 			if (!this.manager.isRegistered()) {
 				throw new IllegalStateException("User is not registered but exists at " + dataPath
 						+ ". Either link successfully or register and verify with signal-cli.");
@@ -126,6 +98,10 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			handleErrorNatively(this.connection, "Unable to generate device link uri: " + e.getMessage());
 			e.printStackTrace();
 		}
+	}
+	
+	public void registerAccount(boolean voiceVerification) throws IOException {
+		this.manager.register(voiceVerification);
 	}
 
 	public void run() {

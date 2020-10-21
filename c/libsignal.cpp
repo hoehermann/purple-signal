@@ -181,8 +181,10 @@ signal_login(PurpleAccount *account)
     sa->account = account;
     sa->pc = pc;
 
-    const char * settings_dir_format = purple_account_get_string(account, SIGNAL_OPTION_SETTINGS_DIR, SIGNAL_DEFAULT_SETTINGS_DIR);
-    char * settings_dir = g_strdup_printf(settings_dir_format, purple_user_dir());
+    std::string settings_dir(purple_account_get_string(account, SIGNAL_OPTION_SETTINGS_DIR, SIGNAL_DEFAULT_SETTINGS_DIR));
+    if (settings_dir == "") {
+        settings_dir = std::string(purple_user_dir()) + "/signal";
+    }
     purple_connection_set_state(pc, PURPLE_CONNECTION_CONNECTING);
     try {
         purplesignal_login(
@@ -194,7 +196,6 @@ signal_login(PurpleAccount *account)
     } catch (std::exception & e) {
         purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, e.what());
     }
-    g_free(settings_dir);
 }
 
 static void
@@ -254,7 +255,7 @@ signal_add_account_options(GList *account_options)
     account_options = g_list_append(account_options, option);
     
     option = purple_account_option_string_new(
-                _("signal-cli's settings directory (%s can be used for the purple user dir, leave empty for default)"),
+                _("signal-cli's settings directory (leave empty for purple user dir)"),
                 SIGNAL_OPTION_SETTINGS_DIR,
                 SIGNAL_DEFAULT_SETTINGS_DIR
                 );
