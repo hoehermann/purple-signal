@@ -7,7 +7,7 @@
 #include "de_hehoe_purple_signal_PurpleSignal.h"
 #include "libsignal.h"
 #include "libsignal-jni.h"
-#include "libsignal-link.h"
+#include "libsignal-account.h"
 
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleQRCodeNatively(JNIEnv *env, jclass cls, jlong pc, jstring jmessage) {
     const char *message = env->GetStringUTFChars(jmessage, 0);

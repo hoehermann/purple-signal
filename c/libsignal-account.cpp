@@ -1,7 +1,7 @@
 #include <sstream>
 #include "QR-Code-generator/cpp/QrCode.hpp"
 
-#include "libsignal-link.h"
+#include "libsignal-account.h"
 #include "libsignal.h"
 
 

@@ -20,8 +20,9 @@ set(SRC_LIST
     libsignal-jni.h
     libsignal-jni.cpp
     libsignal-natives.cpp
-    libsignal-link.h
-    libsignal-link.cpp
+    libsignal-account.h
+    libsignal-account.cpp
+    libsignal-account.cpp
     # TODO: submodule these
     typedjni.hpp
     typedjni.cpp
