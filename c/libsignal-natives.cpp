@@ -1,13 +1,18 @@
 /*
  * Implementation of native functions.
- * These are called from Java. They must absolutely not throw exceptions.
+ * 
+ * These are called from Java. They must *absolutely not* throw exceptions.
  * They should defer their work to the appropriate functions to be handled in Pidgin's main thread.
+ * The PurpleSignalConnectionFunction body may throw an exception. It is caught in the the main thread.
  */
 
 #include "de_hehoe_purple_signal_PurpleSignal.h"
 #include "libsignal.h"
-#include "libsignal-jni.h"
+#include "handler.hpp"
 #include "libsignal-account.h"
+
+PurpleSignalMessage::PurpleSignalMessage(uintptr_t pc, std::unique_ptr<PurpleSignalConnectionFunction> & function) : 
+    pc(pc), function(std::move(function)) {};
 
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleQRCodeNatively(JNIEnv *env, jclass cls, jlong pc, jstring jmessage) {
     const char *message = env->GetStringUTFChars(jmessage, 0);

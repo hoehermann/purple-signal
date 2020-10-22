@@ -16,13 +16,18 @@ message(STATUS
 
 set(SRC_LIST
     purple_compat.h
+    libsignal.h
     libsignal.cpp
-    libsignal-jni.h
-    libsignal-jni.cpp
     libsignal-natives.cpp
-    libsignal-account.h
-    libsignal-account.cpp
-    libsignal-account.cpp
+    libsignal-natives.hpp
+    handler.cpp
+    jni/purplesignal.hpp
+    jni/purplesignal.cpp
+    jni/account.cpp
+    jni/connection.cpp
+    jni/message.cpp
+    jni/utils.cpp
+    jni/utils.hpp
     # TODO: submodule these
     typedjni.hpp
     typedjni.cpp
