@@ -1,24 +1,5 @@
-﻿/*
- *   signal plugin for libpurple
- *   Copyright (C) 2019 Hermann Höhne
- *
- *   This program is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
- /*
-  * Please note this is the third purple plugin I have ever written.
-  * I still have no idea what I am doing.
+﻿ /*
+  * This file contains all exported C functions as required by libpurple.
   */
 
 #include <stdio.h>
@@ -27,8 +8,6 @@
 #ifdef __GNUC__
 #include <unistd.h>
 #endif
-
-#define _(a) (a)
 
 #include "purple_compat.h"
 #if PURPLE_VERSION_CHECK(3, 0, 0)
@@ -52,130 +31,6 @@
 
 #include "libsignal.h"
 
-TypedJNIEnv *signaljvm = nullptr; // only one Java VM over all connections
-
-PurpleConversation *signal_find_conversation(const char *username, PurpleAccount *account) {
-    PurpleIMConversation *imconv = purple_conversations_find_im_with_account(username, account);
-    if (imconv == NULL) {
-        imconv = purple_im_conversation_new(account, username);
-    }
-    PurpleConversation *conv = PURPLE_CONVERSATION(imconv);
-    if (conv == NULL) {
-        imconv = purple_conversations_find_im_with_account(username, account);
-        conv = PURPLE_CONVERSATION(imconv);
-    }
-    return conv;
-}
-
-void
-signal_display_message(PurpleConnection *pc, const std::string & chat, const std::string & sender, const std::string & message, const long timestamp, const PurpleMessageFlags flags)
-{
-    SignalAccount *sa = static_cast<SignalAccount*>(purple_connection_get_protocol_data(pc));
-    PurpleConversation *conv = signal_find_conversation(chat.c_str(), sa->account);
-    purple_conversation_write(conv, sender.c_str(), message.c_str(), flags, timestamp);
-}
-
-/*
- * Interprets a message. Handles login success and failure.
- */
-void
-signal_process_message(PurpleConnection *pc, const std::string & chat, const std::string & sender, const std::string & message, const long timestamp, const PurpleMessageFlags flags)
-{
-    //SignalAccount *sa = purple_connection_get_protocol_data(pc);
-    //PurpleAccount *account = purple_connection_get_account(pc);
-    long t = timestamp;
-    if (!t) {
-        t = time(NULL);
-    }
-    signal_display_message(pc,  chat, sender, message, t, flags);
-}
-
-/*
- * Interprets an error. Disables the account.
- */
-void
-signal_process_error(PurpleConnection *pc, const PurpleDebugLevel level, const std::string & message)
-{
-    purple_debug(level, "signal", "%s\n", message.c_str());
-    purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, message.c_str());
-}
-
-void
-signal_ask_verification_code_ok_cb(PurpleConnection *pc, const char *code) {
-    SignalAccount *sa = static_cast<SignalAccount *>(purple_connection_get_protocol_data(pc));
-    purplesignal_verify(signaljvm, sa->ps, code, "");
-}
-
-void
-signal_ask_verification_code_cancel_cb(PurpleConnection *pc, const char *code) {
-    purple_connection_error(pc, PURPLE_CONNECTION_ERROR_INVALID_USERNAME, "Cannot continue without verification.");
-}
-
-void
-signal_ask_verification_code(PurpleConnection *pc) {
-    SignalAccount *sa = static_cast<SignalAccount *>(purple_connection_get_protocol_data(pc));
-    purple_request_input(
-        pc /*handle*/, 
-        "Verification" /*title*/, 
-        "Please enter verification code" /*primary*/,
-        NULL /*secondary*/, 
-        NULL /*default_value*/, 
-        false /*multiline*/,
-        false /*masked*/, 
-        NULL /*hint*/,
-        "OK" /*ok_text*/, 
-        G_CALLBACK(signal_ask_verification_code_ok_cb),
-        "Cancel" /*cancel_text*/, 
-        G_CALLBACK(signal_ask_verification_code_cancel_cb),
-        sa->account /*account*/, 
-        NULL /*who*/, 
-        NULL /*conv*/,
-        pc /*user_data*/
-    );
-}
-
-const int SIGNAL_ACCOUNT_LINK = 0;
-const int SIGNAL_ACCOUNT_REGISTER = 1;
-const int SIGNAL_ACCOUNT_VERIFY = 2;
-
-void
-signal_ask_register_or_link_ok_cb(PurpleConnection *pc, int choice) {
-    SignalAccount *sa = static_cast<SignalAccount *>(purple_connection_get_protocol_data(pc));
-    try {
-        switch (choice) {
-            case SIGNAL_ACCOUNT_LINK: purplesignal_link(signaljvm, sa->ps); break;
-            case SIGNAL_ACCOUNT_REGISTER: purplesignal_register(signaljvm, sa->ps, false); break;
-            case SIGNAL_ACCOUNT_VERIFY: signal_ask_verification_code(pc); break;
-            default: signal_debug(PURPLE_DEBUG_ERROR, "User dialogue returned with invalid choice.");
-        }
-    } catch (std::exception & e) {
-        purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,e.what());
-    }   
-}
-
-void
-signal_ask_register_or_link_cancel_cb(PurpleConnection *pc, int choice) {
-    purple_connection_error(pc, PURPLE_CONNECTION_ERROR_INVALID_USERNAME, "Cannot continue without account.");
-}
-
-void
-signal_ask_register_or_link(PurpleConnection *pc) {
-    SignalAccount *sa = static_cast<SignalAccount *>(purple_connection_get_protocol_data(pc));
-    purple_request_choice(
-        pc, 
-        "Unknown account", "Please choose",
-        NULL, 0,
-        "OK", G_CALLBACK(signal_ask_register_or_link_ok_cb),
-        "Cancel", G_CALLBACK(signal_ask_register_or_link_cancel_cb),
-        sa->account, NULL, NULL, 
-        pc, 
-        "Link to existing account", SIGNAL_ACCOUNT_LINK, 
-        "Register new", SIGNAL_ACCOUNT_REGISTER, 
-        "Re-enter existing verification code", SIGNAL_ACCOUNT_VERIFY, 
-        NULL
-    );
-}
-
 extern "C" {
 
 static const char *
@@ -189,22 +44,14 @@ signal_login(PurpleAccount *account)
 {
     PurpleConnection *pc = purple_account_get_connection(account);
 
-    const char *libdir = purple_account_get_string(account, SIGNAL_OPTION_LIBDIR, SIGNAL_DEFAULT_LIBDIR);
-    if (!libdir[0]) {
+    const std::string libdir(purple_account_get_string(account, SIGNAL_OPTION_LIBDIR, SIGNAL_DEFAULT_LIBDIR));
+    if (libdir == "") {
         purple_connection_error(
             pc, 
             PURPLE_CONNECTION_ERROR_OTHER_ERROR, 
-            _("Path to signal-cli's lib directory is empty. Set it appropriately (e.g. /opt/signal-cli/lib).")
+            "Path to signal-cli's lib directory is empty. Set it appropriately (e.g. /opt/signal-cli/lib)."
         );
         return;
-    }
-    char *errormsg = purplesignal_init(libdir, signaljvm);
-    if (errormsg) {
-        purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, errormsg);
-        g_free(errormsg);
-        return;
-    } else {
-        purple_debug_info("signal", "JVM seems to have been initalized.\n");
     }
 
     // this protocol does not support anything special right now
@@ -217,22 +64,16 @@ signal_login(PurpleAccount *account)
     | PURPLE_CONNECTION_NO_BGCOLOR);
     purple_connection_set_flags(pc, pc_flags);
 
-    SignalAccount *sa = g_new0(SignalAccount, 1);
-    purple_connection_set_protocol_data(pc, sa);
-    sa->account = account;
-    sa->pc = pc;
-
-    std::string settings_dir(purple_account_get_string(account, SIGNAL_OPTION_SETTINGS_DIR, SIGNAL_DEFAULT_SETTINGS_DIR));
-    if (settings_dir == "") {
-        settings_dir = std::string(purple_user_dir()) + "/signal";
-    }
-    purple_connection_set_state(pc, PURPLE_CONNECTION_CONNECTING);
     try {
-        purplesignal_login(
-            signaljvm, &sa->ps, (uintptr_t)pc, 
-            purple_account_get_username(account),
-            settings_dir
-        );
+        PurpleSignalConnection *sa = new PurpleSignalConnection(account, pc, libdir);
+        purple_connection_set_protocol_data(pc, sa);
+
+        std::string settings_dir(purple_account_get_string(account, SIGNAL_OPTION_SETTINGS_DIR, SIGNAL_DEFAULT_SETTINGS_DIR));
+        if (settings_dir == "") {
+            settings_dir = std::string(purple_user_dir()) + "/signal";
+        }
+        purple_connection_set_state(pc, PURPLE_CONNECTION_CONNECTING);
+        sa->login(purple_account_get_username(account), settings_dir);
         purple_connection_set_state(pc, PURPLE_CONNECTION_CONNECTED);
     } catch (std::exception & e) {
         purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, e.what());
@@ -242,9 +83,9 @@ signal_login(PurpleAccount *account)
 static void
 signal_close(PurpleConnection *pc)
 {
-    SignalAccount *sa = (SignalAccount *)purple_connection_get_protocol_data(pc);
-    purplesignal_close(sa->ps);
-    g_free(sa);
+    PurpleSignalConnection *sa = (PurpleSignalConnection *)purple_connection_get_protocol_data(pc);
+    sa->close();
+    delete sa;
 }
 
 static GList *
@@ -253,10 +94,10 @@ signal_status_types(PurpleAccount *account)
     GList *types = NULL;
     PurpleStatusType *status;
 
-    status = purple_status_type_new_full(PURPLE_STATUS_AVAILABLE, SIGNAL_STATUS_STR_ONLINE, _("Online"), TRUE, TRUE, FALSE);
+    status = purple_status_type_new_full(PURPLE_STATUS_AVAILABLE, SIGNAL_STATUS_STR_ONLINE, "Online", TRUE, TRUE, FALSE);
     types = g_list_append(types, status);
 
-    status = purple_status_type_new_full(PURPLE_STATUS_OFFLINE, SIGNAL_STATUS_STR_OFFLINE, _("Offline"), TRUE, TRUE, FALSE);
+    status = purple_status_type_new_full(PURPLE_STATUS_OFFLINE, SIGNAL_STATUS_STR_OFFLINE, "Offline", TRUE, TRUE, FALSE);
     types = g_list_append(types, status);
 
     status = purple_status_type_new_full(PURPLE_STATUS_MOBILE, SIGNAL_STATUS_STR_MOBILE, NULL, FALSE, FALSE, TRUE);
@@ -268,9 +109,9 @@ signal_status_types(PurpleAccount *account)
 static int
 signal_send_im(PurpleConnection *pc, const gchar *who, const gchar *message, PurpleMessageFlags flags)
 {
-    SignalAccount *sa = (SignalAccount *)purple_connection_get_protocol_data(pc);
+    PurpleSignalConnection *sa = (PurpleSignalConnection *)purple_connection_get_protocol_data(pc);
     try {
-        return purplesignal_send(signaljvm, sa->ps, who, message);
+        return sa->send(who, message);
     } catch (std::exception & e) {
         purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, e.what());
         return -1;
@@ -289,14 +130,14 @@ signal_add_account_options(GList *account_options)
     PurpleAccountOption *option;
     
     option = purple_account_option_string_new(
-                _("signal-cli's lib directory (containing .jar files)"),
+                "signal-cli's lib directory (containing .jar files)",
                 SIGNAL_OPTION_LIBDIR,
                 SIGNAL_DEFAULT_LIBDIR
                 );
     account_options = g_list_append(account_options, option);
     
     option = purple_account_option_string_new(
-                _("signal-cli's settings directory (leave empty for purple user dir)"),
+                "signal-cli's settings directory (leave empty for purple user dir)",
                 SIGNAL_OPTION_SETTINGS_DIR,
                 SIGNAL_DEFAULT_SETTINGS_DIR
                 );
@@ -322,7 +163,8 @@ static gboolean
 plugin_unload(PurplePlugin *plugin, GError **error)
 {
     purple_signals_disconnect_by_handle(plugin);
-    purplesignal_destroy(signaljvm);
+    // TODO: move this out of here
+    purplesignal_destroy(PurpleSignalConnection::jvm);
     return TRUE;
 }
 

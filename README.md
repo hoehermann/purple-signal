@@ -17,6 +17,8 @@ The signal client library is written in Java.
 This project uses JNI to create a Java VM instance within the C part of the plug-in. An instance of the Java Class implementing the signal client is created. Upon receival of a message, a static method is called. This call-back method is a native method implemented in C. It forwards the data to libpurple.  
 This may be considered dark magic by some.
 
+Please note this is the third purple plugin I have ever written. I still have no idea what I am doing.
+
 ### Features
 
 This plug-in is a proof-of-concept with very little features:

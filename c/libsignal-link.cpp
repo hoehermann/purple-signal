@@ -6,7 +6,7 @@
 
 
 void signal_show_qr_code(PurpleConnection *pc, const std::string & qr_code_ppm, const std::string & qr_raw_data) {
-    SignalAccount *sa = static_cast<SignalAccount *>(purple_connection_get_protocol_data(pc));
+    PurpleSignalConnection *sa = static_cast<PurpleSignalConnection *>(purple_connection_get_protocol_data(pc));
 
     PurpleRequestFields *fields = purple_request_fields_new();
     PurpleRequestFieldGroup *group = purple_request_field_group_new(NULL);
@@ -21,7 +21,7 @@ void signal_show_qr_code(PurpleConnection *pc, const std::string & qr_code_ppm, 
     const char *secondary = g_strdup_printf("Signal account %s", username);
 
     purple_request_fields(
-        sa->pc, /*handle*/
+        sa->connection, /*handle*/
         "Logon QR Code", /*title*/
         "Please scan this QR code with your phone", /*primary*/
         secondary, /*secondary*/

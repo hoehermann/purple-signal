@@ -157,17 +157,17 @@ void purplesignal_exception_check(TypedJNIEnv *tenv) {
     }
 }
 
-void purplesignal_login(TypedJNIEnv* sjvm, PurpleSignal *ps, uintptr_t connection, const char* username, const std::string & settings_dir) {
-    TypedJNIClass psclass = sjvm->find_class("de/hehoe/purple_signal/PurpleSignal");
-    ps->instance = std::make_unique<TypedJNIObject>(
+void PurpleSignalConnection::login(const char* username, const std::string & settings_dir) {
+    TypedJNIClass psclass = jvm->find_class("de/hehoe/purple_signal/PurpleSignal");
+    ps.instance = std::make_unique<TypedJNIObject>(
         psclass.GetConstructor<jlong,jstring,jstring>()(
-            connection, sjvm->make_jstring(username), sjvm->make_jstring(settings_dir)
+            uintptr_t(connection), jvm->make_jstring(username), jvm->make_jstring(settings_dir)
         )
     );
-    ps->send_message = ps->instance->GetMethod<jint(jstring,jstring)>("sendMessage");
+    ps.send_message = ps.instance->GetMethod<jint(jstring,jstring)>("sendMessage");
     //signal_debug(PURPLE_DEBUG_INFO, "Starting background thread…");
     //ps->instance->GetMethod<void(void)>("startReceiving")();
-    purplesignal_exception_check(sjvm);
+    purplesignal_exception_check(jvm);
 }
 
 void purplesignal_register(TypedJNIEnv* sjvm, PurpleSignal & ps, bool voice) {
@@ -187,13 +187,14 @@ void purplesignal_verify(TypedJNIEnv *sjvm, PurpleSignal & ps, const std::string
     purplesignal_exception_check(sjvm);
 }
 
-int purplesignal_close(const PurpleSignal & ps) {
+int PurpleSignalConnection::close() {
     if (ps.instance == nullptr) {
         signal_debug(PURPLE_DEBUG_INFO, "Pointer already NULL during purplesignal_close(). Assuming no connection ever made.");
         return 1;
     }
     try {
         ps.instance->GetMethod<void()>("stopReceiving")();
+        purplesignal_exception_check(jvm);
     } catch (std::exception & e) {
         signal_debug(PURPLE_DEBUG_ERROR, e.what());
         return 0;
@@ -201,11 +202,19 @@ int purplesignal_close(const PurpleSignal & ps) {
     return 1;
 }
 
-int purplesignal_send(TypedJNIEnv *sjvm, PurpleSignal & ps, const char *who, const char *message) {
-    if (sjvm == nullptr || ps.send_message == nullptr) {
+int PurpleSignalConnection::send(const char *who, const char *message) {
+    if (jvm == nullptr || ps.send_message == nullptr) {
         throw std::runtime_error("PurpleSignal has not been initialized.");
     }
-    return ps.send_message(sjvm->make_jstring(who), sjvm->make_jstring(message));
+    return ps.send_message(jvm->make_jstring(who), jvm->make_jstring(message));
 }
 
 PurpleSignalMessage::PurpleSignalMessage(uintptr_t pc, std::unique_ptr<PurpleSignalConnectionFunction> & function) : pc(pc), function(std::move(function)) {};
+
+
+PurpleSignalConnection::PurpleSignalConnection(PurpleAccount *account, PurpleConnection *pc, const std::string & signal_lib_directory) : account(account), connection(pc) {
+    const char *errormsg = purplesignal_init(signal_lib_directory.c_str(), jvm);
+    if (errormsg) {
+        throw std::runtime_error(errormsg);
+    }
+};
