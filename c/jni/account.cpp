@@ -1,4 +1,8 @@
-#include "../libsignal.h"
+/*
+ * Implementation of all glue (C → Java) for account management (register, link verify).
+ */
+
+#include "../libsignal.hpp"
 #include "utils.hpp"
 
 void PurpleSignalConnection::register_account(bool voice) {

@@ -16,11 +16,15 @@ message(STATUS
 
 set(SRC_LIST
     purple_compat.h
-    libsignal.h
+    libsignal.hpp
     libsignal.cpp
-    libsignal-natives.cpp
-    libsignal-natives.hpp
-    handler.cpp
+    natives.cpp
+    handler/account.cpp
+    handler/account.hpp
+    handler/async.cpp
+    handler/async.hpp
+    handler/message.cpp
+    handler/message.hpp
     jni/purplesignal.hpp
     jni/purplesignal.cpp
     jni/account.cpp

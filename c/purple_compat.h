@@ -1,5 +1,5 @@
 /*
- *   go-whatsapp plugin for libpurple
+ *   purple_compat
  *   Copyright (C) 2016-2017 Eion Robb
  *
  *   This program is free software: you can redistribute it and/or modify

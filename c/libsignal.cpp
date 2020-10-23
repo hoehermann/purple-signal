@@ -1,5 +1,8 @@
 ﻿ /*
   * This file contains all exported C functions as required by libpurple.
+  * 
+  * All exceptions should be caught in these functions.
+  * Exception: Exceptions thrown by asynchronous events are handled in async.cpp.
   */
 
 #include <stdio.h>
@@ -29,7 +32,7 @@
 #define SIGNAL_OPTION_SETTINGS_DIR "signal-cli-settings-dir"
 #define SIGNAL_DEFAULT_SETTINGS_DIR ""
 
-#include "libsignal.h"
+#include "libsignal.hpp"
 
 extern "C" {
 
@@ -235,6 +238,3 @@ static PurplePluginInfo info = {
 
 PURPLE_INIT_PLUGIN(signal, plugin_init, info);
 }
-
-// TODO: this should be somewhere else
-PurpleSignalConnection::PurpleSignalConnection(PurpleAccount *account, PurpleConnection *pc, const std::string & signal_lib_directory) : account(account), connection(pc), ps(signal_lib_directory) {};

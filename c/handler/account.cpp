@@ -1,9 +1,7 @@
 #include <sstream>
-#include "QR-Code-generator/cpp/QrCode.hpp"
-
-#include "libsignal-account.h"
-#include "libsignal.h"
-
+#include "../QR-Code-generator/cpp/QrCode.hpp"
+#include "../libsignal.hpp"
+#include "account.hpp"
 
 void signal_show_qr_code(PurpleConnection *pc, const std::string & qr_code_ppm, const std::string & qr_raw_data) {
     PurpleSignalConnection *sa = static_cast<PurpleSignalConnection *>(purple_connection_get_protocol_data(pc));

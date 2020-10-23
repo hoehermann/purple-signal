@@ -7,12 +7,10 @@
  */
 
 #include "de_hehoe_purple_signal_PurpleSignal.h"
-#include "libsignal.h"
-#include "handler.hpp"
-#include "libsignal-account.h"
-
-PurpleSignalMessage::PurpleSignalMessage(uintptr_t pc, std::unique_ptr<PurpleSignalConnectionFunction> & function) : 
-    pc(pc), function(std::move(function)) {};
+#include "libsignal.hpp"
+#include "handler/async.hpp"
+#include "handler/account.hpp"
+#include "handler/message.hpp"
 
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleQRCodeNatively(JNIEnv *env, jclass cls, jlong pc, jstring jmessage) {
     const char *message = env->GetStringUTFChars(jmessage, 0);
@@ -52,7 +50,7 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleErrorNati
     const char *message = env->GetStringUTFChars(jmessage, 0);
     auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
         [message = std::string(message)] (PurpleConnection *pc) {
-            signal_process_error(pc, PURPLE_DEBUG_ERROR, message);
+            throw std::runtime_error(message);
         }
     );
     env->ReleaseStringUTFChars(jmessage, message);

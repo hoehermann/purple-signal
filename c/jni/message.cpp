@@ -1,4 +1,4 @@
-#include "../libsignal.h"
+#include "../libsignal.hpp"
 #include "utils.hpp"
 
 int PurpleSignalConnection::send(const char *who, const char *message) {

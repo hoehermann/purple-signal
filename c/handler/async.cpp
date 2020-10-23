@@ -3,7 +3,8 @@
  */
  
 #include <purple.h>
-#include "handler.hpp"
+#include "../purple_compat.h"
+#include "async.hpp"
 
 gboolean
 signal_check_connection_existance(PurpleConnection *pc) {
@@ -41,7 +42,11 @@ signal_handle_message_mainthread(gpointer data)
             "signal", "Not handling message for non-existant connection %p.\n", pc
         );
     } else {
-        (*psm->function)(pc);
+        try {
+            (*psm->function)(pc);
+        } catch (std::exception & e) {
+            purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, e.what());
+        }
     }
     delete psm;
     return FALSE;
@@ -60,3 +65,7 @@ signal_handle_message_async(PurpleSignalMessage *psm)
 void signal_debug(PurpleDebugLevel level, const std::string & message) {
     purple_debug(level, "signal", "%s\n", message.c_str());
 }
+
+
+PurpleSignalMessage::PurpleSignalMessage(uintptr_t pc, std::unique_ptr<PurpleSignalConnectionFunction> & function) : 
+    pc(pc), function(std::move(function)) {};

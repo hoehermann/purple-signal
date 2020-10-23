@@ -1,5 +1,9 @@
-#include "../libsignal.h"
-#include "../handler.hpp"
+/*
+ * Implementation PurpleSignal (Java) instance management (create JVM, create object, destroy JVM).
+ */
+
+#include "../libsignal.hpp"
+#include "../handler/async.hpp"
 #include "purplesignal.hpp"
 #include "utils.hpp"
 
@@ -75,6 +79,8 @@ char *readdir_of_jars(const char *path, const char *prefix) {
     }
 }
 
+TypedJNIEnv * PurpleSignal::jvm = nullptr;
+
 PurpleSignal::PurpleSignal(const std::string & signal_cli_path) {
     if (jvm != nullptr) {
         signal_debug(PURPLE_DEBUG_INFO, "jni pointers not null. JVM seems to be initialized already.");
@@ -130,3 +136,5 @@ void PurpleSignal::destroy() {
         jvm = nullptr;
     }
 }
+
+PurpleSignalConnection::PurpleSignalConnection(PurpleAccount *account, PurpleConnection *pc, const std::string & signal_lib_directory) : account(account), connection(pc), ps(signal_lib_directory) {};

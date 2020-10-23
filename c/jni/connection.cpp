@@ -1,5 +1,9 @@
-#include "../libsignal.h"
-#include "../handler.hpp"
+/*
+ * Implementation of all glue (C → Java) for connection management (establish / login, close).
+ */
+
+#include "../libsignal.hpp"
+#include "../handler/async.hpp"
 #include "utils.hpp"
 
 void PurpleSignalConnection::login(const char* username, const std::string & settings_dir) {
@@ -24,6 +28,7 @@ int PurpleSignalConnection::close() {
         ps.instance->GetMethod<void()>("stopReceiving")();
         tjni_exception_check(ps.jvm);
     } catch (std::exception & e) {
+        // this is non-critical (connection is being closed anyway)
         signal_debug(PURPLE_DEBUG_ERROR, e.what());
         return 0;
     }
