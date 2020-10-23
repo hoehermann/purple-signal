@@ -14,8 +14,6 @@ void PurpleSignalConnection::login(const char* username, const std::string & set
         )
     );
     ps.send_message = ps.instance->GetMethod<jint(jstring,jstring)>("sendMessage");
-    //signal_debug(PURPLE_DEBUG_INFO, "Starting background thread…");
-    //ps->instance->GetMethod<void(void)>("startReceiving")();
     tjni_exception_check(ps.jvm);
 }
 
@@ -29,7 +27,7 @@ int PurpleSignalConnection::close() {
         tjni_exception_check(ps.jvm);
     } catch (std::exception & e) {
         // this is non-critical (connection is being closed anyway)
-        signal_debug(PURPLE_DEBUG_ERROR, e.what());
+        signal_debug(PURPLE_DEBUG_ERROR, std::string("Ignoring exception which occurred while closing connection: ") + e.what());
         return 0;
     }
     return 1;

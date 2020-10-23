@@ -17,7 +17,6 @@ import org.asamk.signal.manager.NotAGroupMemberException;
 import org.asamk.signal.manager.ProvisioningManager;
 import org.asamk.signal.manager.ServiceConfig;
 import org.asamk.signal.manager.UserAlreadyExists;
-import org.asamk.signal.storage.SignalAccount;
 import org.asamk.signal.util.SecurityProvider;
 import org.asamk.signal.util.Util;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -42,53 +41,61 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	private Thread receiverThread = null;
 	private String username = null;
 	private final SignalServiceConfiguration serviceConfiguration;
-	private	final String USER_AGENT = "purple-signal";
-	private final String settingsPath;
+	private final String dataPath;
 
-	public PurpleSignal(long connection, String username, String settingsDir)
+	private class BaseConfig {
+		private static final String USER_AGENT = "purple-signal";
+	}
+
+	public PurpleSignal(long connection, String username, String dataPath)
 			throws IOException, TimeoutException, InvalidKeyException, UserAlreadyExists {
-		serviceConfiguration = ServiceConfig
-				.createDefaultServiceConfiguration(USER_AGENT);
+		serviceConfiguration = ServiceConfig.createDefaultServiceConfiguration(BaseConfig.USER_AGENT);
 
 		this.connection = connection;
 		this.username = username;
 		this.keepReceiving = false;
-		this.settingsPath = settingsDir;
+		this.dataPath = dataPath;
 
 		// stolen from signald/src/main/java/io/finn/signald/Main.java
 		// Workaround for BKS truststore
 		Security.insertProviderAt(new SecurityProvider(), 1);
 		Security.addProvider(new BouncyCastleProvider());
 
-		logNatively(DEBUG_LEVEL_INFO, "Using settings path " + settingsDir);
-		String dataPath = settingsDir + "/data";
+		logNatively(DEBUG_LEVEL_INFO, "Using data path " + dataPath);
 		{
 			File f = new File(dataPath);
 			if (!f.isDirectory()) {
 				f.mkdirs();
 			}
 		}
-		this.manager = Manager.init(this.username, settingsDir, serviceConfiguration, USER_AGENT);
-		if (SignalAccount.userExists(dataPath, this.username)) {
-			if (!this.manager.isRegistered()) {
+
+		// the rest is adapted from signal-cli/src/main/java/org/asamk/signal/Main.java
+
+		this.manager = Manager.init(username, dataPath, serviceConfiguration, BaseConfig.USER_AGENT);
+		// exception may bubble to C++
+
+		{
+			Manager m = this.manager;
+			try {
+				m.checkAccountState();
+			} catch (AuthorizationFailedException e) {
+				logNatively(DEBUG_LEVEL_INFO, "Authorization failed, was the number registered elsewhere?");
 				askRegisterOrLinkNatively(this.connection);
-			} else {
-				try {
-					this.manager.checkAccountState();
-				} catch (AuthorizationFailedException e) {
-					askRegisterOrLinkNatively(this.connection);
-				}
 			}
-			logNatively(DEBUG_LEVEL_INFO, "Using registered user " + manager.getUsername());
-		} else {
-			logNatively(DEBUG_LEVEL_INFO, "User does not exist. Asking about how to continue…");
-			askRegisterOrLinkNatively(this.connection);
+			// other exceptions may bubble to C++
 		}
+
+		// TODO: this is reached if user does not even exist
+
+		logNatively(DEBUG_LEVEL_INFO, "User " + manager.getUsername() + " is allegedly authorized.");
+		startReceiving();
+
+		// TODO: signal account "connected"
 	}
-	
+
 	public void linkAccount() throws TimeoutException, IOException {
-		ProvisioningManager provisioningManager = new ProvisioningManager(settingsPath, serviceConfiguration,
-				USER_AGENT);
+		ProvisioningManager provisioningManager = new ProvisioningManager(dataPath, serviceConfiguration,
+				BaseConfig.USER_AGENT);
 		String deviceLinkUri = provisioningManager.getDeviceLinkUri();
 		handleQRCodeNatively(this.connection, deviceLinkUri);
 		receiverThread = new Thread(() -> {
@@ -99,7 +106,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 				handleErrorNatively(this.connection, "Unable to finish device link: " + e.getMessage());
 				e.printStackTrace();
 			}
-			if (linkedUsername.equals(this.username)) {
+			if (!linkedUsername.equals(this.username)) {
 				handleErrorNatively(this.connection, String.format(
 						"Configured username %s does not match linked number %s.", this.username, linkedUsername));
 			} else {
@@ -111,17 +118,18 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		receiverThread.setDaemon(true);
 		receiverThread.start();
 	}
-	
+
 	public void registerAccount(boolean voiceVerification) throws IOException {
 		this.manager.register(voiceVerification);
 		askVerificationCodeNatively(this.connection);
 	}
-	
+
 	public void verifyAccount(String verificationCode, String pin) throws IOException {
 		this.manager.verifyAccount(verificationCode, pin);
 	}
 
 	public void run() {
+		logNatively(DEBUG_LEVEL_INFO, "Starting to listen for messages…");
 		boolean ignoreAttachments = true;
 		boolean returnOnTimeout = true; // it looks like setting this to false means "listen for new messages
 										// forever".
@@ -141,10 +149,10 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			handleErrorNatively(this.connection, "Unhandled exception while waiting for message.");
 			t.printStackTrace();
 		}
-		logNatively(DEBUG_LEVEL_INFO, "RECEIVING DONE");
+		logNatively(DEBUG_LEVEL_INFO, "Receiving has finished.");
 	}
 
-	public void startReceiving() {
+	private void startReceiving() {
 		if (receiverThread != null) {
 			handleErrorNatively(this.connection,
 					"Called startReceiving() on a connection already receiving. This is a bug.");
@@ -164,14 +172,14 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 				this.manager.close();
 			} catch (IOException e) {
 				// I don't care about what dying managers have to say
-				// e.printStackTrace();
 			}
 		}
-		try {
-			receiverThread.join();
-		} catch (InterruptedException e) {
-			// I don't care about what dying connections have to say
-			// e.printStackTrace();
+		if (receiverThread != null) {
+			try {
+				receiverThread.join();
+			} catch (InterruptedException e) {
+				// I don't care about what dying connections have to say
+			}
 		}
 	}
 
@@ -323,10 +331,10 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			long timestamp, int flags);
 
 	public static native void handleErrorNatively(long connection, String error);
-	
+
 	public static native void askRegisterOrLinkNatively(long connection);
-	
+
 	public static native void handleQRCodeNatively(long connection, String deviceLinkUri);
-	
+
 	public static native void askVerificationCodeNatively(long connection);
 }

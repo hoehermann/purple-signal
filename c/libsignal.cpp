@@ -140,7 +140,7 @@ signal_add_account_options(GList *account_options)
     account_options = g_list_append(account_options, option);
     
     option = purple_account_option_string_new(
-                "signal-cli's settings directory (leave empty for purple user dir)",
+                "signal-cli's data directory (leave empty for purple user dir)",
                 SIGNAL_OPTION_SETTINGS_DIR,
                 SIGNAL_DEFAULT_SETTINGS_DIR
                 );
