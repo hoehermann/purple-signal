@@ -1,5 +1,5 @@
 #pragma once
 
-#include "../typedjni.hpp"
+#include "../submodules/typedjni/typedjni.hpp"
 
 void tjni_exception_check(TypedJNIEnv *tenv);

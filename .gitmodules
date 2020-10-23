@@ -1,0 +1,6 @@
+[submodule "c/submodules/qrcode"]
+	path = c/submodules/qrcode
+	url = https://github.com/nayuki/QR-Code-generator
+[submodule "c/submodules/typedjni"]
+	path = c/submodules/typedjni
+	url = https://github.com/hoehermann/TypedJNI

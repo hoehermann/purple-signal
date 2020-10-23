@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../typedjni.hpp"
+#include "../submodules/typedjni/typedjni.hpp"
 
 class PurpleSignal {
     public:

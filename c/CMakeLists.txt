@@ -32,11 +32,10 @@ set(SRC_LIST
     jni/message.cpp
     jni/utils.cpp
     jni/utils.hpp
-    # TODO: submodule these
-    typedjni.hpp
-    typedjni.cpp
-    QR-Code-generator/cpp/QrCode.cpp
-    QR-Code-generator/cpp/QrCode.hpp
+    submodules/typedjni/typedjni.hpp
+    submodules/typedjni/typedjni.cpp
+    submodules/qrcode/cpp/QrCode.cpp
+    submodules/qrcode/cpp/QrCode.hpp
     )
 
 set(TARGET_NAME ${PROJECT_NAME})

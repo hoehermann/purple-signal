@@ -1,5 +1,5 @@
 #include <sstream>
-#include "../QR-Code-generator/cpp/QrCode.hpp"
+#include "../submodules/qrcode/cpp/QrCode.hpp"
 #include "../libsignal.hpp"
 #include "account.hpp"
 
