@@ -5,6 +5,8 @@
 #include <purple.h>
 #include "jni/purplesignal.hpp"
 
+#define SIGNAL_PLUGIN_ID "prpl-hehoe-signal"
+
 /*
  * Holds all information related to this connection instance.
  * 

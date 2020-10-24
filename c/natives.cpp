@@ -86,3 +86,69 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNa
     env->ReleaseStringUTFChars(jsender, sender);
     signal_handle_message_async(psm);
 }
+
+/*
+ * Retrieves a string from the connection's account's key value store.
+ * I hope it is okay doing this asynchronously.
+ */
+JNIEXPORT jstring JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_getSettingsStringNatively(JNIEnv *env, jclass, jlong jpc, jstring jkey, jstring jdefault_value) {
+    uintptr_t pc = jpc;
+    const char *key = env->GetStringUTFChars(jkey, 0);
+    const char *default_value = env->GetStringUTFChars(jdefault_value, 0);
+    PurpleSignalConnection *sa = (PurpleSignalConnection *)purple_connection_get_protocol_data((PurpleConnection *)pc);
+    const char *value = purple_account_get_string(sa->account, key, default_value);
+    return env->NewStringUTF(value);
+}
+
+/*
+ * Writes a string to the account.
+ * TODO: Wrap into a PurpleSignalMessage and to this on the main thread?
+ */
+JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_setSettingsStringNatively(JNIEnv *env, jclass, jlong jpc, jstring jkey, jstring jvalue) {
+    uintptr_t pc = jpc;
+    const char *key = env->GetStringUTFChars(jkey, 0);
+    const char *value = env->GetStringUTFChars(jvalue, 0);
+    PurpleSignalConnection *sa = (PurpleSignalConnection *)purple_connection_get_protocol_data((PurpleConnection *)pc);
+    purple_account_set_string(sa->account, key, value);
+    env->ReleaseStringUTFChars(jkey, key);
+    env->ReleaseStringUTFChars(jvalue, value);
+}
+
+/*
+ * Looking through all currently active connections, trying to find one handling the username we are looking for.
+ * This is dangerous. I feel dirty.
+ */
+JNIEXPORT jlong JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_lookupUsernameNatively(JNIEnv *env, jclass, jstring jusername) {
+    PurpleConnection *connection_ptr = 0;
+    const char *username = env->GetStringUTFChars(jusername, 0);
+    
+    {
+        GList * connection = purple_connections_get_connecting();
+        while (connection != NULL && connection_ptr == 0) {
+            PurpleConnection *pc = (PurpleConnection *)connection->data;
+            PurpleAccount * account = purple_connection_get_account(pc);
+            const char *u = purple_account_get_username(account);
+            const char *id = purple_account_get_protocol_id(account);
+            if (!strcmp(SIGNAL_PLUGIN_ID, id) && !strcmp(username, u)) {
+                connection_ptr = pc;
+            };
+            connection = connection->next;
+        }
+    }
+    {
+        GList * connection = purple_connections_get_all();
+        while (connection != NULL && connection_ptr == 0) {
+            PurpleConnection *pc = (PurpleConnection *)connection->data;
+            PurpleAccount * account = purple_connection_get_account(pc);
+            const char *u = purple_account_get_username(account);
+            const char *id = purple_account_get_protocol_id(account);
+            if (!strcmp(SIGNAL_PLUGIN_ID, id) && !strcmp(username, u)) {
+                connection_ptr = pc;
+            };
+            connection = connection->next;
+        }
+    }
+    
+    env->ReleaseStringUTFChars(jusername, username);
+    return (jlong)connection_ptr;
+}

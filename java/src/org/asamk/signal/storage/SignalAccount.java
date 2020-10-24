@@ -10,6 +10,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import de.hehoe.purple_signal.PurpleSignal;
+
 import org.asamk.signal.storage.contacts.ContactInfo;
 import org.asamk.signal.storage.contacts.JsonContactsStore;
 import org.asamk.signal.storage.groups.GroupInfo;
@@ -22,7 +24,6 @@ import org.asamk.signal.storage.protocol.SessionInfo;
 import org.asamk.signal.storage.protocol.SignalServiceAddressResolver;
 import org.asamk.signal.storage.threads.LegacyJsonThreadStore;
 import org.asamk.signal.storage.threads.ThreadInfo;
-import org.asamk.signal.util.IOUtils;
 import org.asamk.signal.util.Util;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.profiles.ProfileKey;
@@ -30,20 +31,11 @@ import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.Medium;
-import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.channels.Channels;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.FileChannel;
-import java.nio.channels.FileLock;
 import java.util.Collection;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -51,8 +43,8 @@ import java.util.stream.Collectors;
 public class SignalAccount implements Closeable {
 
     private final ObjectMapper jsonProcessor = new ObjectMapper();
-    private final FileChannel fileChannel;
-    private final FileLock lock;
+    final static String PURPLE_SIGNALDATA_KEY = "signaldata";
+    private final long connection;
     private String username;
     private UUID uuid;
     private int deviceId = SignalServiceAddress.DEFAULT_DEVICE_ID;
@@ -72,39 +64,25 @@ public class SignalAccount implements Closeable {
     private RecipientStore recipientStore;
     private ProfileStore profileStore;
 
-    private SignalAccount(final FileChannel fileChannel, final FileLock lock) {
-        this.fileChannel = fileChannel;
-        this.lock = lock;
+    private SignalAccount(final long connection) {
+        this.connection = connection;
         jsonProcessor.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE); // disable autodetect
-        jsonProcessor.enable(SerializationFeature.INDENT_OUTPUT); // for pretty print, you can disable it.
+        jsonProcessor.disable(SerializationFeature.INDENT_OUTPUT); // for pretty print, you can disable it.
         jsonProcessor.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
         jsonProcessor.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
         jsonProcessor.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
     }
 
     public static SignalAccount load(String dataPath, String username) throws IOException {
-        final String fileName = getFileName(dataPath, username);
-        final Pair<FileChannel, FileLock> pair = openFileChannel(fileName);
-        try {
-            SignalAccount account = new SignalAccount(pair.first(), pair.second());
-            account.load();
-            return account;
-        } catch (Throwable e) {
-            pair.second().close();
-            pair.first().close();
-            throw e;
-        }
+        final long connection = PurpleSignal.lookupUsername(username);
+        SignalAccount account = new SignalAccount(connection);
+        account.load();
+        return account;
     }
 
     public static SignalAccount create(String dataPath, String username, IdentityKeyPair identityKey, int registrationId, ProfileKey profileKey) throws IOException {
-        IOUtils.createPrivateDirectories(dataPath);
-        String fileName = getFileName(dataPath, username);
-        if (!new File(fileName).exists()) {
-            IOUtils.createPrivateFile(fileName);
-        }
-
-        final Pair<FileChannel, FileLock> pair = openFileChannel(fileName);
-        SignalAccount account = new SignalAccount(pair.first(), pair.second());
+        final long connection = PurpleSignal.lookupUsername(username);
+        SignalAccount account = new SignalAccount(connection);
 
         account.username = username;
         account.profileKey = profileKey;
@@ -119,14 +97,8 @@ public class SignalAccount implements Closeable {
     }
 
     public static SignalAccount createLinkedAccount(String dataPath, String username, UUID uuid, String password, int deviceId, IdentityKeyPair identityKey, int registrationId, String signalingKey, ProfileKey profileKey) throws IOException {
-        IOUtils.createPrivateDirectories(dataPath);
-        String fileName = getFileName(dataPath, username);
-        if (!new File(fileName).exists()) {
-            IOUtils.createPrivateFile(fileName);
-        }
-
-        final Pair<FileChannel, FileLock> pair = openFileChannel(fileName);
-        SignalAccount account = new SignalAccount(pair.first(), pair.second());
+        final long connection = PurpleSignal.lookupUsername(username);
+        SignalAccount account = new SignalAccount(connection);
 
         account.username = username;
         account.uuid = uuid;
@@ -145,25 +117,25 @@ public class SignalAccount implements Closeable {
         return account;
     }
 
-    public static String getFileName(String dataPath, String username) {
-    	System.err.println("getFileName has been called on MY SignalAccount.");
-        return dataPath + "/" + username;
+    public static boolean userExists(final long connection) {
+        return !PurpleSignal.getSettingsStringNatively(connection, PURPLE_SIGNALDATA_KEY, "").equals("");
     }
 
     public static boolean userExists(String dataPath, String username) {
         if (username == null) {
             return false;
         }
-        File f = new File(getFileName(dataPath, username));
-        return !(!f.exists() || f.isDirectory());
+        try {
+            return userExists(PurpleSignal.lookupUsername(username));
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     private void load() throws IOException {
         JsonNode rootNode;
-        synchronized (fileChannel) {
-            fileChannel.position(0);
-            rootNode = jsonProcessor.readTree(Channels.newInputStream(fileChannel));
-        }
+        String json = PurpleSignal.getSettingsStringNatively(this.connection, PURPLE_SIGNALDATA_KEY, "");
+        rootNode = jsonProcessor.readTree(json);
 
         JsonNode uuidNode = rootNode.get("uuid");
         if (uuidNode != null && !uuidNode.isNull()) {
@@ -286,9 +258,6 @@ public class SignalAccount implements Closeable {
     }
 
     public void save() {
-        if (fileChannel == null) {
-            return;
-        }
         ObjectNode rootNode = jsonProcessor.createObjectNode();
         rootNode.put("username", username)
                 .put("uuid", uuid == null ? null : uuid.toString())
@@ -308,31 +277,12 @@ public class SignalAccount implements Closeable {
                 .putPOJO("profileStore", profileStore)
         ;
         try {
-            try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-                // Write to memory first to prevent corrupting the file in case of serialization errors
-                jsonProcessor.writeValue(output, rootNode);
-                ByteArrayInputStream input = new ByteArrayInputStream(output.toByteArray());
-                synchronized (fileChannel) {
-                    fileChannel.position(0);
-                    input.transferTo(Channels.newOutputStream(fileChannel));
-                    fileChannel.truncate(fileChannel.position());
-                    fileChannel.force(false);
-                }
-            }
+            // Write to memory first to prevent corrupting the file in case of serialization errors
+            String json = jsonProcessor.writeValueAsString(rootNode);
+            PurpleSignal.setSettingsStringNatively(this.connection, PURPLE_SIGNALDATA_KEY, json);
         } catch (Exception e) {
-            System.err.println(String.format("Error saving file: %s", e.getMessage()));
+            throw new RuntimeException(e.getMessage());
         }
-    }
-
-    private static Pair<FileChannel, FileLock> openFileChannel(String fileName) throws IOException {
-        FileChannel fileChannel = new RandomAccessFile(new File(fileName), "rw").getChannel();
-        FileLock lock = fileChannel.tryLock();
-        if (lock == null) {
-            System.err.println("Config file is in use by another instance, waiting…");
-            lock = fileChannel.lock();
-            System.err.println("Config file lock acquired.");
-        }
-        return new Pair<>(fileChannel, lock);
     }
 
     public void setResolver(final SignalServiceAddressResolver resolver) {
@@ -453,12 +403,6 @@ public class SignalAccount implements Closeable {
 
     @Override
     public void close() throws IOException {
-        synchronized (fileChannel) {
-            try {
-                lock.close();
-            } catch (ClosedChannelException ignored) {
-            }
-            fileChannel.close();
-        }
+        // nothing to do in this implementation
     }
 }

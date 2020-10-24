@@ -62,15 +62,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		Security.insertProviderAt(new SecurityProvider(), 1);
 		Security.addProvider(new BouncyCastleProvider());
 
-		logNatively(DEBUG_LEVEL_INFO, "Using data path " + dataPath);
-		{
-			File f = new File(dataPath);
-			if (!f.isDirectory()) {
-				f.mkdirs();
-			}
-		}
-
-		if (!SignalAccount.userExists(dataPath + "/data/", this.username)) {
+		if (!SignalAccount.userExists(this.connection)) {
 			askRegisterOrLinkNatively(this.connection);
 		} else {
 
@@ -90,7 +82,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 				// other exceptions may bubble to C++
 			}
 
-			logNatively(DEBUG_LEVEL_INFO, "User " + manager.getUsername() + " is allegedly authorized.");
+			logNatively(DEBUG_LEVEL_INFO, "User " + manager.getUsername() + " is authorized.");
 			startReceiving();
 
 			// TODO: signal account "connected"
@@ -227,6 +219,9 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			handleErrorNatively(this.connection, "Exception while handling message: " + exception.getMessage());
 		} else if (envelope == null) {
 			handleErrorNatively(this.connection, "Handling null envelope."); // this should never happen
+		} else if (envelope.isUnidentifiedSender()) {
+			logNatively(DEBUG_LEVEL_INFO, "Ignoring envelope from unidentified sender.");
+			SignalMessagePrinter.printEnvelope(envelope);
 		} else {
 			SignalMessagePrinter.printEnvelope(envelope);
 			String source = envelope.getSourceAddress().getNumber().orNull();
@@ -347,4 +342,18 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	public static native void handleQRCodeNatively(long connection, String deviceLinkUri);
 
 	public static native void askVerificationCodeNatively(long connection);
+	
+	public static native String getSettingsStringNatively(long connection, String key, String defaultValue);
+	
+	public static native void setSettingsStringNatively(long connection, String key, String value);
+	
+	public static long lookupUsername(String username) throws IOException {
+		long connection = lookupUsernameNatively(username);
+		if (connection == 0) {
+			throw new IOException("No connection exists for this username.");
+		}
+		return connection;
+	}
+	
+	public static native long lookupUsernameNatively(String username);
 }

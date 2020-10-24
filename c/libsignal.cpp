@@ -17,7 +17,6 @@
 #error Purple3 not supported.
 #endif
 
-#define SIGNAL_PLUGIN_ID "prpl-hehoe-signal"
 #ifndef SIGNAL_PLUGIN_VERSION
 #error Must set SIGNAL_PLUGIN_VERSION in Makefile
 #endif
@@ -136,13 +135,6 @@ signal_add_account_options(GList *account_options)
                 "signal-cli's lib directory (containing .jar files)",
                 SIGNAL_OPTION_LIBDIR,
                 SIGNAL_DEFAULT_LIBDIR
-                );
-    account_options = g_list_append(account_options, option);
-    
-    option = purple_account_option_string_new(
-                "signal-cli's data directory (leave empty for purple user dir)",
-                SIGNAL_OPTION_SETTINGS_DIR,
-                SIGNAL_DEFAULT_SETTINGS_DIR
                 );
     account_options = g_list_append(account_options, option);
     
