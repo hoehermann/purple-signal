@@ -170,6 +170,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		if (this.manager != null) {
 			try {
 				this.manager.close();
+				this.manager = null;
 			} catch (IOException e) {
 				// I don't care about what dying managers have to say
 			}
@@ -191,6 +192,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		tg.enumerate(list);
 		for (Thread t : list) {
 			if (!t.getName().equals("main")) {
+				// && !t.isDaemon() – daemon threads must die, too.
 				logNatively(DEBUG_LEVEL_INFO, "Interrupting Java thread " + t.getName());
 				t.interrupt();
 			}
