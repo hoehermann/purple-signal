@@ -17,6 +17,7 @@ import org.asamk.signal.manager.NotAGroupMemberException;
 import org.asamk.signal.manager.ProvisioningManager;
 import org.asamk.signal.manager.ServiceConfig;
 import org.asamk.signal.manager.UserAlreadyExists;
+import org.asamk.signal.storage.SignalAccount;
 import org.asamk.signal.util.SecurityProvider;
 import org.asamk.signal.util.Util;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -69,28 +70,31 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			}
 		}
 
-		// the rest is adapted from signal-cli/src/main/java/org/asamk/signal/Main.java
+		if (!SignalAccount.userExists(dataPath + "/data/", this.username)) {
+			askRegisterOrLinkNatively(this.connection);
+		} else {
 
-		this.manager = Manager.init(username, dataPath, serviceConfiguration, BaseConfig.USER_AGENT);
-		// exception may bubble to C++
+			// the rest is adapted from signal-cli/src/main/java/org/asamk/signal/Main.java
 
-		{
-			Manager m = this.manager;
-			try {
-				m.checkAccountState();
-			} catch (AuthorizationFailedException e) {
-				logNatively(DEBUG_LEVEL_INFO, "Authorization failed, was the number registered elsewhere?");
-				askRegisterOrLinkNatively(this.connection);
+			this.manager = Manager.init(username, dataPath, serviceConfiguration, BaseConfig.USER_AGENT);
+			// exception may bubble to C++
+
+			{
+				Manager m = this.manager;
+				try {
+					m.checkAccountState();
+				} catch (AuthorizationFailedException e) {
+					logNatively(DEBUG_LEVEL_INFO, "Authorization failed, was the number registered elsewhere?");
+					askRegisterOrLinkNatively(this.connection);
+				}
+				// other exceptions may bubble to C++
 			}
-			// other exceptions may bubble to C++
+
+			logNatively(DEBUG_LEVEL_INFO, "User " + manager.getUsername() + " is allegedly authorized.");
+			startReceiving();
+
+			// TODO: signal account "connected"
 		}
-
-		// TODO: this is reached if user does not even exist
-
-		logNatively(DEBUG_LEVEL_INFO, "User " + manager.getUsername() + " is allegedly authorized.");
-		startReceiving();
-
-		// TODO: signal account "connected"
 	}
 
 	public void linkAccount() throws TimeoutException, IOException {
@@ -120,12 +124,16 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	}
 
 	public void registerAccount(boolean voiceVerification) throws IOException {
+		if (this.manager == null) {
+			this.manager = Manager.init(username, dataPath, serviceConfiguration, BaseConfig.USER_AGENT);
+		}
 		this.manager.register(voiceVerification);
 		askVerificationCodeNatively(this.connection);
 	}
 
 	public void verifyAccount(String verificationCode, String pin) throws IOException {
 		this.manager.verifyAccount(verificationCode, pin);
+		handleErrorNatively(this.connection, "Verification finished. Reconnect needed.");
 	}
 
 	public void run() {
