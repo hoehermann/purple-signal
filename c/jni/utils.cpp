@@ -3,6 +3,14 @@
 void tjni_exception_check(TypedJNIEnv *tenv) {
     if (tenv->env->ExceptionCheck()) {
         jthrowable jexception = tenv->env->ExceptionOccurred();
+        if (true) { // TODO: "if purple -d active"
+            TypedJNIMethod<void()>::get(
+                tenv->env, 
+                tenv->find_class("java/lang/Throwable").cls, 
+                jexception, 
+                "printStackTrace"
+            )();
+        }
         jstring jstr = TypedJNIMethod<jstring()>::get(
             tenv->env, 
             tenv->find_class("java/lang/Object").cls, 
