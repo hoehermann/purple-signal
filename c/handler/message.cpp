@@ -30,9 +30,9 @@ signal_process_message(PurpleConnection *pc, const std::string & chat, const std
 {
     //PurpleSignalConnection *sa = purple_connection_get_protocol_data(pc);
     //PurpleAccount *account = purple_connection_get_account(pc);
-    long t = timestamp;
+    long t = timestamp / 1000; // in Java, signal timestamps are milliseconds
     if (!t) {
         t = time(NULL);
     }
-    signal_display_message(pc,  chat, sender, message, t, flags);
+    signal_display_message(pc, chat, sender, message, t, flags);
 }
