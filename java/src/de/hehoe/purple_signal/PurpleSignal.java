@@ -3,7 +3,6 @@ package de.hehoe.purple_signal;
 import java.security.Security;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
@@ -190,20 +189,22 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		ThreadGroup tg = Thread.currentThread().getThreadGroup();
 		Thread[] list = new Thread[tg.activeCount()];
 		tg.enumerate(list);
-		for (Thread t : list) {
-			if (!t.getName().equals("main")) {
-				// && !t.isDaemon() – daemon threads must die, too.
-				logNatively(DEBUG_LEVEL_INFO, "Interrupting Java thread " + t.getName());
-				t.interrupt();
+		for (int i = 0; i < 2 && list.length > 1; i++) {
+			for (Thread t : list) {
+				if (!t.getName().equals("main")) {
+					// && !t.isDaemon() – daemon threads must die, too.
+					logNatively(DEBUG_LEVEL_INFO, "Interrupting Java thread " + t.getName());
+					t.interrupt();
+				}
 			}
-		}
-		for (Thread t : list) {
-			if (!t.getName().equals("main")) {
-				try {
-					t.join();
-					logNatively(DEBUG_LEVEL_INFO, "Java thread " + t.getName() + " joined.");
-				} catch (InterruptedException e) {
-					// I now really don't care. Just die already.
+			for (Thread t : list) {
+				if (!t.getName().equals("main")) {
+					try {
+						t.join();
+						logNatively(DEBUG_LEVEL_INFO, "Java thread " + t.getName() + " joined.");
+					} catch (InterruptedException e) {
+						// I now really don't care. Just die already.
+					}
 				}
 			}
 		}
@@ -219,12 +220,15 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			handleErrorNatively(this.connection, "Exception while handling message: " + exception.getMessage());
 		} else if (envelope == null) {
 			handleErrorNatively(this.connection, "Handling null envelope."); // this should never happen
-		} else if (envelope.isUnidentifiedSender()) {
-			logNatively(DEBUG_LEVEL_INFO, "Ignoring envelope from unidentified sender.");
-			SignalMessagePrinter.printEnvelope(envelope);
 		} else {
 			SignalMessagePrinter.printEnvelope(envelope);
-			String source = envelope.getSourceAddress().getNumber().orNull();
+			String source = null;
+			if (envelope.isUnidentifiedSender()) {
+				logNatively(DEBUG_LEVEL_INFO, "Envelope shows unidentified sender. Using sender from content.");
+				source = content.getSender().getNumber().orNull();
+			} else {
+				source = envelope.getSourceAddress().getNumber().orNull();
+			}
 			if (source == null) {
 				logNatively(DEBUG_LEVEL_INFO, "Source is null. Ignoring message.");
 			} else if (envelope.isReceipt()) {
@@ -233,16 +237,19 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 				logNatively(DEBUG_LEVEL_INFO, "Failed to decrypt incoming message. Ignoring message.");
 				// handleErrorNatively(this.connection, "Failed to decrypt incoming message.");
 			} else {
-				long timestamp = 0;// envelope.getTimestamp();
+				long timestamp = envelope.getTimestamp();
 				SignalMessagePrinter.printSignalServiceContent(content);
 				if (content.getDataMessage().isPresent()) {
 					handleDataMessage(content, source);
+					//this.manager.sendReceipt(content.getSender(), content.getDataMessage().get().getTimestamp());
+					// TODO: sendReceipt is private – file issue or adapt Manager
 				} else if (content.getSyncMessage().isPresent()) {
 					handleSyncMessage(content, source);
 				} else if (content.getTypingMessage().isPresent()) {
 					logNatively(DEBUG_LEVEL_INFO, "Received typing message for " + source + ". Ignoring.");
 				} else if (content.getReceiptMessage().isPresent()) {
-					handleMessageNatively(this.connection, source, source, "[Message was received.]", timestamp,
+					String description = "[Message "+content.getReceiptMessage().get().getType().toString().toLowerCase()+".]";
+					handleMessageNatively(this.connection, source, source, description, timestamp,
 							PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
 				} else {
 					handleMessageNatively(this.connection, source, source, "[Received message of unknown type.]",
