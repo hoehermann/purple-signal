@@ -26,7 +26,9 @@
 #endif
 
 #ifdef _WIN32
+#ifndef MINGW_CROSSCOMPILING
 #include <win32/win32dep.h>
+#endif
 #endif
 
 // Purple2 compat functions

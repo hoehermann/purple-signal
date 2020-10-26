@@ -1,8 +1,4 @@
-if (WIN32)
-    find_package(Java 1.8.0 EXACT REQUIRED)
-else()
-    find_package(Java 1.8.0 REQUIRED)
-endif()
+find_package(Java 1.8.0 REQUIRED)
 find_package(Java COMPONENTS Development)
 find_package(JNI REQUIRED)
 

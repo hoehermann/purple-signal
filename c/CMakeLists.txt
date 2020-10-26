@@ -38,11 +38,16 @@ set(SRC_LIST
     submodules/qrcode/cpp/QrCode.hpp
     )
 
+#set (CMAKE_CXX_STANDARD 14)
+
 set(TARGET_NAME ${PROJECT_NAME})
 
 # target name is not "signal" as there could be collisions with other (system-supplied) libraries called "signal"
 add_library(${TARGET_NAME} SHARED ${SRC_LIST})
-#add_executable(${TARGET_NAME} ${SRC_LIST})
+
+if (${MINGW_CROSSCOMPILING})
+target_compile_definitions(${TARGET_NAME} PRIVATE MINGW_CROSSCOMPILING)
+endif()
 
 target_compile_options(${TARGET_NAME} PRIVATE 
     -Werror 
