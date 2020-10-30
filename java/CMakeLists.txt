@@ -16,6 +16,7 @@ include(UseJava)
 add_jar(purple_signal 
     src/de/hehoe/purple_signal/PurpleSignal.java
     submodules/signal-cli/src/main/java/org/asamk/signal/storage/SignalAccount.java
+    submodules/signal-cli/src/main/java/org/asamk/signal/manager/Manager.java
     src/de/hehoe/purple_signal/SignalMessagePrinter.java
     ENTRY_POINT de/hehoe/purple_signal/PurpleSignal
     GENERATE_NATIVE_HEADERS purple_signal_native # this needs at least CMake 3.11
