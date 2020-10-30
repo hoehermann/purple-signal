@@ -4,3 +4,6 @@
 [submodule "c/submodules/typedjni"]
 	path = c/submodules/typedjni
 	url = https://github.com/hoehermann/TypedJNI
+[submodule "java/submodules/signal-cli"]
+	path = java/submodules/signal-cli
+	url = ./signal-cli
