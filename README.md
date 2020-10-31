@@ -23,18 +23,26 @@ Please note this is the third purple plugin I have ever written. I still have no
 
 This plug-in is a proof-of-concept with very little features:
 
+* Register a new account
 * Link to an existing account  
-  * Use the provided code with signal-cli
-  * Generate a QR code with `qrencode` or any [online service](https://www.the-qrcode-generator.com/) to scan with the official app running on a smartphone
+  Use the provided code text with signal-cli  
+  or  
+  Scan the provided QR code with with the official app
 * Simple Messaging
   * one-to-one conversation
   * Group conversation
   
-  For more functionality, check out [purple-signald](https://github.com/hoehermann/libpurple-signald). It offers more features, but it depends on a third-party service and thus is Linux only.
+For more functionality, check out [purple-signald](https://github.com/hoehermann/libpurple-signald). It offers more features, but it depends on a third-party service and thus is Linux only.
 
 ### Missing Features
 
-* Register a new account
+* Retry failed messages
 * Attachments
 * Proper group chats
+* Contact list download
 * Group chat management (explicit join, leave, administration, …)
+* virtually everything else
+
+### Known Problems
+
+* It takes two minutes for the internal JVM to shut down.
