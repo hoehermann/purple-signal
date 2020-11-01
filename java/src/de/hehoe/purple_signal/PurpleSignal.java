@@ -20,7 +20,9 @@ import org.asamk.signal.storage.SignalAccount;
 import org.asamk.signal.util.SecurityProvider;
 import org.asamk.signal.util.Util;
 import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
+import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
@@ -241,8 +243,12 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 				SignalMessagePrinter.printSignalServiceContent(content);
 				if (content.getDataMessage().isPresent()) {
 					handleDataMessage(content, source);
-					//this.manager.sendReceipt(content.getSender(), content.getDataMessage().get().getTimestamp());
-					// TODO: sendReceipt is private – file issue or adapt Manager
+					// TODO: do not send receipt until handleMessageNatively returns successfully
+					try {
+						this.manager.sendReceipt(content.getSender(), content.getDataMessage().get().getTimestamp(), SignalServiceReceiptMessage.Type.READ);
+					} catch (IOException | UntrustedIdentityException e) {
+						logNatively(DEBUG_LEVEL_INFO, "Receipt was not sent successfully: " + e);
+					}
 				} else if (content.getSyncMessage().isPresent()) {
 					handleSyncMessage(content, source);
 				} else if (content.getTypingMessage().isPresent()) {
@@ -296,7 +302,6 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			String message = dataMessage.getBody().get();
 			long timestamp = dataMessage.getTimestamp();
 			handleMessageNatively(this.connection, chat, source, message, timestamp, PURPLE_MESSAGE_RECV);
-			// TODO: do not send receipt until handleMessageNatively returns successfully
 		} else {
 			handleMessageNatively(this.connection, chat, source, "[Received data message without body.]", 0,
 					PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
