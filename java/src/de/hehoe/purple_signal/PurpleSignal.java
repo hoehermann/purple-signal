@@ -185,20 +185,32 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		}
 	}
 
-	public static void joinAllThreads() {
+	public static void joinAllThreads() throws InterruptedException {
 		// interrupt all other (user) Threads (internal WebSocket, OkHttp, …) so
 		// DestroyJavaVM does not hang
-		ThreadGroup tg = Thread.currentThread().getThreadGroup();
-		Thread[] list = new Thread[tg.activeCount()];
-		tg.enumerate(list);
-		for (int i = 0; i < 2 && list.length > 1; i++) {
+		Thread[] list = null;
+		while (list == null /*|| list.length > 1*/) {
+			ThreadGroup tg = Thread.currentThread().getThreadGroup();
+			list = new Thread[tg.activeCount()];
+			tg.enumerate(list);
+			
+			StringBuilder sb = new StringBuilder("Java threads:");
+			for (Thread t : list) {
+				sb.append(" '");
+				sb.append(t.getName());
+				sb.append("'");
+			}
+			logNatively(DEBUG_LEVEL_INFO, sb.toString());
+			/*
 			for (Thread t : list) {
 				if (!t.getName().equals("main")) {
 					// && !t.isDaemon() – daemon threads must die, too.
 					logNatively(DEBUG_LEVEL_INFO, "Interrupting Java thread " + t.getName());
 					t.interrupt();
 				}
-			}
+			}*/
+			Thread.sleep(1000);
+			/*
 			for (Thread t : list) {
 				if (!t.getName().equals("main")) {
 					try {
@@ -208,7 +220,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 						// I now really don't care. Just die already.
 					}
 				}
-			}
+			}*/
 		}
 	}
 
