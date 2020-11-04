@@ -124,14 +124,6 @@ void PurpleSignal::destroy() {
     if (jvm == nullptr) {
         signal_debug(PURPLE_DEBUG_INFO, "Pointer already NULL during purplesignal_destroy(). Assuming no JVM ever started.");
     } else {
-        try {
-            // TODO: find PurpleSignal class only once, keep as global reference?
-            TypedJNIClass psclass = jvm->find_class("de/hehoe/purple_signal/PurpleSignal");
-            signal_debug(PURPLE_DEBUG_INFO, "Waiting for all remaining Java threads…");
-            psclass.GetStaticMethod<void()>("joinAllThreads")();
-        } catch (std::exception & e) {
-            signal_debug(PURPLE_DEBUG_INFO, std::string("Exception while waiting for Java threads: ") + e.what());
-        }
         delete jvm;
         jvm = nullptr;
     }
