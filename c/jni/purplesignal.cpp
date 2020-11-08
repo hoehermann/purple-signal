@@ -102,16 +102,15 @@ PurpleSignal::PurpleSignal(const std::string & signal_cli_path) {
         }
 
         JavaVMInitArgs vm_args;
-        const unsigned int nOptions = 3;
-        JavaVMOption options[nOptions];
-        options[0].optionString = classpath;
-        options[1].optionString = librarypath;
-        options[2].optionString = "";
+        std::vector<JavaVMOption> options;
+        JavaVMOption jvmo;
+        jvmo.optionString = classpath; options.push_back(jvmo);
+        jvmo.optionString = librarypath; options.push_back(jvmo);
         if (purple_debug_is_enabled()) {
-            options[2].optionString = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=10044"; 
+            jvmo.optionString = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=10044"; options.push_back(jvmo); 
         }
-        vm_args.options = options;
-        vm_args.nOptions = nOptions;
+        vm_args.options = options.data();
+        vm_args.nOptions = options.size();
         vm_args.version  = JNI_VERSION_1_8;
         jvm = new TypedJNIEnv(vm_args);
         // TODO: convert to std::string
