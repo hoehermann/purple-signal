@@ -2,7 +2,7 @@
 
 ### Windows and Linux
 
-By default, purple-signal uses the data directory provided by signal-cli (`~/.local/share/signal-cli` on Linux). This means you can switch back and forth between signal-cli and Pidgin with purple-signal, but do *not* use both at the same time.
+purple-signal now stores the account information in Pidgin's account data store. If you want to modify the account with `signal-cli`, you need to move the data manually.
 
 ### Windows
 

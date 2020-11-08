@@ -8,7 +8,7 @@ Developed on Ubuntu 18.04. Tested wine 5.0 and Windows 10.
 
 ### Download
 
-Binaries are availiable at https://buildbot.hehoe.de/purple-signal/builds/.
+Binaries are availiable at https://buildbot.hehoe.de/purple-signal/builds/. See [INSTALL](INSTALL.md) on how to install this plug-in.
 
 ### Concept
 
@@ -31,7 +31,9 @@ This plug-in is a proof-of-concept with very little features:
 * Simple Messaging
   * one-to-one conversation
   * Group conversation
-  
+
+Please note that, as of now, you have to add your contacts manually and they appear "offline" in the buddy list.
+
 For more functionality, check out [purple-signald](https://github.com/hoehermann/libpurple-signald). It offers more features, but it depends on a third-party service and thus is Linux only.
 
 ### Missing Features
@@ -41,8 +43,8 @@ For more functionality, check out [purple-signald](https://github.com/hoehermann
 * Proper group chats
 * Contact list download
 * Group chat management (explicit join, leave, administration, …)
-* virtually everything else
+* everything else
 
 ### Known Problems
 
-* It takes two minutes for the internal JVM to shut down.
+* It takes two minutes for the internal JVM to shut down. Or it crashes when terminating Pidgin.
