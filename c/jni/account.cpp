@@ -17,7 +17,7 @@ void PurpleSignalConnection::link_account() {
 
 void PurpleSignalConnection::verify_account(const std::string & code, const std::string & pin) {
     ps.instance->GetMethod<void(jstring, jstring)>("verifyAccount")(
-        *ps.jvm->make_jstring(code), *ps.jvm->make_jstring(pin)
+        ps.jvm->make_jstring(code), ps.jvm->make_jstring(pin)
     );
     tjni_exception_check(ps.jvm);
 }
