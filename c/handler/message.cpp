@@ -1,3 +1,8 @@
+/*
+ * Implementation of handlers for incoming message (Java → C).
+ * This is all to be executed on the main purple thread.
+ */
+
 #include "../purple_compat.h"
 #include "../connection.hpp"
 
@@ -22,14 +27,9 @@ signal_display_message(PurpleConnection *pc, const std::string & chat, const std
     purple_conversation_write(conv, sender.c_str(), message.c_str(), flags, timestamp);
 }
 
-/*
- * Interprets a message. Handles login success and failure.
- */
 void
 signal_process_message(PurpleConnection *pc, const std::string & chat, const std::string & sender, const std::string & message, const long timestamp, const PurpleMessageFlags flags)
 {
-    //PurpleSignalConnection *sa = purple_connection_get_protocol_data(pc);
-    //PurpleAccount *account = purple_connection_get_account(pc);
     long t = timestamp / 1000; // in Java, signal timestamps are milliseconds
     if (!t) {
         t = time(NULL);

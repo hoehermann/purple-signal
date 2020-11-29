@@ -1,3 +1,8 @@
+/*
+ * Implementation of handlers for account management (Java → C → Java).
+ * This is all to be executed on the main purple thread.
+ */
+
 #include <sstream>
 #include "../purple_compat.h"
 #include "../submodules/qrcode/cpp/QrCode.hpp"

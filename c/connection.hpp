@@ -1,7 +1,7 @@
 #pragma once
 
 #include <purple.h>
-#include "jni/purplesignal.hpp"
+#include "purplesignal/purplesignal.hpp"
 
 /*
  * Holds all information related to this connection instance.

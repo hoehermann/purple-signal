@@ -1,3 +1,7 @@
+/*
+ * Utility functions when doing JNI stuff.
+ */
+
 #include "utils.hpp"
 
 void tjni_exception_check(TypedJNIEnv *tenv) {

@@ -1,3 +1,8 @@
+/*
+ * Implementation PurpleSignal (C → Java) messaging (send message).
+ * Message reception is handled by ../natives.cpp and deferred to ../handler/message.cpp.
+ */
+
 #include "purplesignal.hpp"
 #include "utils.hpp"
 

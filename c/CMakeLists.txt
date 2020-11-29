@@ -29,12 +29,12 @@ set(SRC_LIST
     handler/async.hpp
     handler/message.cpp
     handler/message.hpp
-    jni/purplesignal.hpp
-    jni/account.cpp
-    jni/construction.cpp
-    jni/message.cpp
-    jni/utils.cpp
-    jni/utils.hpp
+    purplesignal/purplesignal.hpp
+    purplesignal/account.cpp
+    purplesignal/construction.cpp
+    purplesignal/message.cpp
+    purplesignal/utils.cpp
+    purplesignal/utils.hpp
     submodules/typedjni/typedjni.hpp
     submodules/typedjni/typedjni.cpp
     submodules/qrcode/cpp/QrCode.cpp
