@@ -1,7 +1,7 @@
 #include <sstream>
 #include "../purple_compat.h"
 #include "../submodules/qrcode/cpp/QrCode.hpp"
-#include "../libsignal.hpp"
+#include "../connection.hpp"
 #include "account.hpp"
 
 void signal_show_qr_code(PurpleConnection *pc, const std::string & qr_code_ppm, const std::string & qr_raw_data) {
@@ -54,7 +54,7 @@ std::string signal_generate_qr_code(const std::string & device_link_uri, int zoo
 void
 signal_ask_verification_code_ok_cb(PurpleConnection *pc, const char *code) {
     PurpleSignalConnection *sa = static_cast<PurpleSignalConnection *>(purple_connection_get_protocol_data(pc));
-    sa->verify_account(code, "");
+    sa->ps.verify_account(code, "");
 }
 
 void
@@ -94,8 +94,8 @@ signal_ask_register_or_link_ok_cb(PurpleConnection *pc, int choice) {
     PurpleSignalConnection *sa = static_cast<PurpleSignalConnection *>(purple_connection_get_protocol_data(pc));
     try {
         switch (choice) {
-            case SIGNAL_ACCOUNT_LINK: sa->link_account(); break;
-            case SIGNAL_ACCOUNT_REGISTER: sa->register_account(false); break;
+            case SIGNAL_ACCOUNT_LINK: sa->ps.link_account(); break;
+            case SIGNAL_ACCOUNT_REGISTER: sa->ps.register_account(false); break;
             case SIGNAL_ACCOUNT_VERIFY: signal_ask_verification_code(pc); break;
             default: purple_debug(PURPLE_DEBUG_ERROR, "signal", "%s\n", "User dialogue returned with invalid choice.");
         }

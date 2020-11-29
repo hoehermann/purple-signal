@@ -19,6 +19,10 @@ set(SRC_LIST
     libsignal.hpp
     libsignal.cpp
     natives.cpp
+    environment.hpp
+    environment.cpp
+    connection.hpp
+    connection.cpp
     handler/account.cpp
     handler/account.hpp
     handler/async.cpp
@@ -26,9 +30,8 @@ set(SRC_LIST
     handler/message.cpp
     handler/message.hpp
     jni/purplesignal.hpp
-    jni/purplesignal.cpp
     jni/account.cpp
-    jni/connection.cpp
+    jni/construction.cpp
     jni/message.cpp
     jni/utils.cpp
     jni/utils.hpp

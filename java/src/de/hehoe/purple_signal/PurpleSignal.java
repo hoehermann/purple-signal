@@ -49,7 +49,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		private static final String USER_AGENT = "purple-signal";
 	}
 
-	public PurpleSignal(long connection, String username, String dataPath)
+	public PurpleSignal(long connection, long account, String username, String dataPath)
 			throws IOException, TimeoutException, InvalidKeyException, UserAlreadyExists {
 		serviceConfiguration = ServiceConfig.createDefaultServiceConfiguration(BaseConfig.USER_AGENT);
 
@@ -63,7 +63,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		Security.insertProviderAt(new SecurityProvider(), 1);
 		Security.addProvider(new BouncyCastleProvider());
 
-		if (!SignalAccount.userExists(this.connection)) {
+		if (!SignalAccount.userExists(account)) {
 			askRegisterOrLinkNatively(this.connection);
 		} else {
 
@@ -328,17 +328,17 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
 	public static native void askVerificationCodeNatively(long connection);
 	
-	public static native String getSettingsStringNatively(long connection, String key, String defaultValue);
+	public static native String getSettingsStringNatively(long account, String key, String defaultValue);
 	
-	public static native void setSettingsStringNatively(long connection, String key, String value);
+	public static native void setSettingsStringNatively(long account, String key, String value);
 	
-	public static long lookupUsername(String username) throws IOException {
-		long connection = lookupUsernameNatively(username);
-		if (connection == 0) {
-			throw new IOException("No connection exists for this username.");
+	public static long lookupAccountByUsername(String username) throws IOException {
+		long account = lookupAccountByUsernameNatively(username);
+		if (account == 0) {
+			throw new IOException("No account exists for this username.");
 		}
-		return connection;
+		return account;
 	}
 	
-	public static native long lookupUsernameNatively(String username);
+	public static native long lookupAccountByUsernameNatively(String username);
 }

@@ -1,11 +1,9 @@
 /*
- * Implementation PurpleSignal (Java) instance management (create JVM, create object, destroy JVM).
+ * Implementation of Java runtime environment management (create JVM, destroy JVM).
  */
 
-#include "../libsignal.hpp"
-#include "../handler/async.hpp"
-#include "purplesignal.hpp"
-#include "utils.hpp"
+#include "handler/async.hpp" // for signal_debug (not really needed)
+#include "environment.hpp"
 
 #if defined(__MINGW32__) || defined(_WIN32)
 #define CLASSPATH_SEPARATOR ';'
@@ -79,9 +77,9 @@ char *readdir_of_jars(const char *path, const char *prefix) {
     }
 }
 
-TypedJNIEnv * PurpleSignal::jvm = nullptr;
+TypedJNIEnv * PurpleSignalEnvironment::jvm = nullptr;
 
-PurpleSignal::PurpleSignal(const std::string & signal_cli_path) {
+TypedJNIEnv * PurpleSignalEnvironment::get(const std::string & signal_cli_path) {
     if (jvm != nullptr) {
         signal_debug(PURPLE_DEBUG_INFO, "jni pointers not null. JVM seems to be initialized already.");
     } else {
@@ -97,6 +95,7 @@ PurpleSignal::PurpleSignal(const std::string & signal_cli_path) {
         signal_debug(PURPLE_DEBUG_INFO, librarypath);
         if (classpath[0] != '-') {
             // if classpath does not start with a minus, it contains an error message
+            // TODO: use exception instead
             g_free(librarypath);
             throw std::runtime_error(classpath);
         }
@@ -117,9 +116,10 @@ PurpleSignal::PurpleSignal(const std::string & signal_cli_path) {
         g_free(librarypath);
         g_free(classpath);
     }
+    return jvm;
 }
 
-void PurpleSignal::destroy() {
+void PurpleSignalEnvironment::destroy() {
     if (jvm == nullptr) {
         signal_debug(PURPLE_DEBUG_INFO, "Pointer already NULL during purplesignal_destroy(). Assuming no JVM ever started.");
     } else {
@@ -127,5 +127,3 @@ void PurpleSignal::destroy() {
         jvm = nullptr;
     }
 }
-
-PurpleSignalConnection::PurpleSignalConnection(PurpleAccount *account, PurpleConnection *pc, const std::string & signal_lib_directory) : account(account), connection(pc), ps(signal_lib_directory) {};

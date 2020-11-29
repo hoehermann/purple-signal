@@ -1,5 +1,5 @@
 #include "../purple_compat.h"
-#include "../libsignal.hpp"
+#include "../connection.hpp"
 
 PurpleConversation *signal_find_conversation(const char *username, PurpleAccount *account) {
     PurpleIMConversation *imconv = purple_conversations_find_im_with_account(username, account);

@@ -2,22 +2,22 @@
  * Implementation of all glue (C → Java) for account management (register, link verify).
  */
 
-#include "../libsignal.hpp"
+#include "purplesignal.hpp"
 #include "utils.hpp"
 
-void PurpleSignalConnection::register_account(bool voice) {
-    ps.instance->GetMethod<void(jboolean)>("registerAccount")(voice);
-    tjni_exception_check(ps.jvm);
+void PurpleSignal::register_account(bool voice) {
+    instance.GetMethod<void(jboolean)>("registerAccount")(voice);
+    tjni_exception_check(jvm);
 }
 
-void PurpleSignalConnection::link_account() {
-    ps.instance->GetMethod<void()>("linkAccount")();
-    tjni_exception_check(ps.jvm);
+void PurpleSignal::link_account() {
+    instance.GetMethod<void()>("linkAccount")();
+    tjni_exception_check(jvm);
 }
 
-void PurpleSignalConnection::verify_account(const std::string & code, const std::string & pin) {
-    ps.instance->GetMethod<void(jstring, jstring)>("verifyAccount")(
-        ps.jvm->make_jstring(code), ps.jvm->make_jstring(pin)
+void PurpleSignal::verify_account(const std::string & code, const std::string & pin) {
+    instance.GetMethod<void(jstring, jstring)>("verifyAccount")(
+        jvm->make_jstring(code), jvm->make_jstring(pin)
     );
-    tjni_exception_check(ps.jvm);
+    tjni_exception_check(jvm);
 }

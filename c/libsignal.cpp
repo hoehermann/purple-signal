@@ -32,6 +32,8 @@
 #define SIGNAL_DEFAULT_SETTINGS_DIR ""
 
 #include "libsignal.hpp"
+#include "connection.hpp"
+#include "environment.hpp"
 
 extern "C" {
 
@@ -66,16 +68,15 @@ signal_login(PurpleAccount *account)
     | PURPLE_CONNECTION_NO_BGCOLOR);
     purple_connection_set_flags(pc, pc_flags);
 
-    try {
-        PurpleSignalConnection *sa = new PurpleSignalConnection(account, pc, libdir);
-        purple_connection_set_protocol_data(pc, sa);
+    std::string settings_dir(purple_account_get_string(account, SIGNAL_OPTION_SETTINGS_DIR, SIGNAL_DEFAULT_SETTINGS_DIR));
+    if (settings_dir == "") {
+        settings_dir = std::string(purple_user_dir()) + "/signal";
+    }
 
-        std::string settings_dir(purple_account_get_string(account, SIGNAL_OPTION_SETTINGS_DIR, SIGNAL_DEFAULT_SETTINGS_DIR));
-        if (settings_dir == "") {
-            settings_dir = std::string(purple_user_dir()) + "/signal";
-        }
+    try {
         purple_connection_set_state(pc, PURPLE_CONNECTION_CONNECTING);
-        sa->login(purple_account_get_username(account), settings_dir);
+        PurpleSignalConnection *sa = new PurpleSignalConnection(account, pc, libdir, settings_dir, purple_account_get_username(account));
+        purple_connection_set_protocol_data(pc, sa);
         purple_connection_set_state(pc, PURPLE_CONNECTION_CONNECTED);
     } catch (std::exception & e) {
         purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, e.what());
@@ -86,8 +87,9 @@ static void
 signal_close(PurpleConnection *pc)
 {
     PurpleSignalConnection *sa = (PurpleSignalConnection *)purple_connection_get_protocol_data(pc);
-    sa->close();
-    delete sa;
+    if (sa) {
+        delete sa;
+    }
 }
 
 static GList *
@@ -113,7 +115,7 @@ signal_send_im(PurpleConnection *pc, const gchar *who, const gchar *message, Pur
 {
     PurpleSignalConnection *sa = (PurpleSignalConnection *)purple_connection_get_protocol_data(pc);
     try {
-        return sa->send(who, message);
+        return sa->ps.send(who, message);
     } catch (std::exception & e) {
         purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, e.what());
         return -1;
@@ -159,7 +161,7 @@ plugin_unload(PurplePlugin *plugin, GError **error)
 {
     purple_signals_disconnect_by_handle(plugin);
     // TODO: move this out of here
-    PurpleSignal::destroy();
+    PurpleSignalEnvironment::destroy();
     return TRUE;
 }
 
