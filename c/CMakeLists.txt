@@ -18,11 +18,13 @@ set(SRC_LIST
     purple_compat.h
     libsignal.hpp
     libsignal.cpp
-    natives.cpp
     environment.hpp
     environment.cpp
     connection.hpp
     connection.cpp
+    buddies.hpp
+    buddies.cpp
+    natives.cpp
     handler/account.cpp
     handler/account.hpp
     handler/async.cpp

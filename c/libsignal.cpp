@@ -22,10 +22,6 @@
 #endif
 #define SIGNAL_PLUGIN_WEBSITE "https://github.com/hoehermann/purple-signal"
 
-#define SIGNAL_STATUS_STR_ONLINE   "online"
-#define SIGNAL_STATUS_STR_OFFLINE  "offline"
-#define SIGNAL_STATUS_STR_MOBILE   "mobile"
-
 #define SIGNAL_OPTION_LIBDIR "signal-cli-lib-dir"
 #define SIGNAL_DEFAULT_LIBDIR ""
 #define SIGNAL_OPTION_SETTINGS_DIR "signal-cli-settings-dir"
@@ -34,6 +30,7 @@
 #include "libsignal.hpp"
 #include "connection.hpp"
 #include "environment.hpp"
+#include "buddies.hpp"
 
 extern "C" {
 
@@ -78,6 +75,7 @@ signal_login(PurpleAccount *account)
         PurpleSignalConnection *sa = new PurpleSignalConnection(account, pc, libdir, settings_dir, purple_account_get_username(account));
         purple_connection_set_protocol_data(pc, sa);
         purple_connection_set_state(pc, PURPLE_CONNECTION_CONNECTED);
+        assume_all_buddies_online(account);
     } catch (std::exception & e) {
         purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, e.what());
     }
@@ -98,13 +96,13 @@ signal_status_types(PurpleAccount *account)
     GList *types = NULL;
     PurpleStatusType *status;
 
-    status = purple_status_type_new_full(PURPLE_STATUS_AVAILABLE, SIGNAL_STATUS_STR_ONLINE, "Online", TRUE, TRUE, FALSE);
+    status = purple_status_type_new_full(PURPLE_STATUS_AVAILABLE, STATUS_STR_ONLINE, "Online", TRUE, TRUE, FALSE);
     types = g_list_append(types, status);
 
-    status = purple_status_type_new_full(PURPLE_STATUS_OFFLINE, SIGNAL_STATUS_STR_OFFLINE, "Offline", TRUE, TRUE, FALSE);
+    status = purple_status_type_new_full(PURPLE_STATUS_OFFLINE, STATUS_STR_OFFLINE, "Offline", TRUE, TRUE, FALSE);
     types = g_list_append(types, status);
 
-    status = purple_status_type_new_full(PURPLE_STATUS_MOBILE, SIGNAL_STATUS_STR_MOBILE, NULL, FALSE, FALSE, TRUE);
+    status = purple_status_type_new_full(PURPLE_STATUS_MOBILE, STATUS_STR_MOBILE, NULL, FALSE, FALSE, TRUE);
     types = g_list_prepend(types, status);
 
     return types;
