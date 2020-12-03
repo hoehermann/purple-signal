@@ -5,8 +5,8 @@
 #include "purplesignal.hpp"
 #include "utils.hpp"
 
-void PurpleSignal::register_account(bool voice) {
-    instance.GetMethod<void(jboolean)>("registerAccount")(voice);
+void PurpleSignal::register_account(bool voice, const std::string & captcha) {
+    instance.GetMethod<void(jboolean, jstring)>("registerAccount")(voice, jvm->make_jstring(captcha));
     tjni_exception_check(jvm);
 }
 

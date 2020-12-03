@@ -59,7 +59,7 @@ char *readdir_of_jars(const char *path, const char *prefix) {
             const char *extension = strrchr(ep->d_name, '.');
             if (extension != NULL && strcmp(extension, ".jar") == 0) { // consider only .jar files
                 g_string_append_printf(classpath, "%c%s/%s", CLASSPATH_SEPARATOR, path, ep->d_name);
-                if (strstr(ep->d_name, "signal-cli") != NULL) {
+                if (strcmp(ep->d_name, SIGNAL_CLI_JAR) == 0) {
                     signal_cli_jar_found = TRUE;
                 }
             }
@@ -67,7 +67,7 @@ char *readdir_of_jars(const char *path, const char *prefix) {
         closedir(dp);
     }
     if (!signal_cli_jar_found) {
-        out = g_strdup_printf("Directory '%s' contained no signal-cli*.jar.", path);
+        out = g_strdup_printf("Directory '%s' contained no %s.", path, SIGNAL_CLI_JAR);
     }
     if (out == NULL) {
         return g_string_free(classpath, FALSE);

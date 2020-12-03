@@ -2,7 +2,6 @@ find_package(Java 1.8.0 REQUIRED)
 find_package(Java COMPONENTS Development)
 find_package(JNI REQUIRED)
 
-set(SIGNAL_CLI_JAR "signal-cli-0.6.11.jar")
 set(SIGNAL_CLI_LIB_DIR "/opt/signal-cli/lib" CACHE PATH "Path to signal-cli's jar files.")
 if (NOT EXISTS ${SIGNAL_CLI_LIB_DIR}/${SIGNAL_CLI_JAR})
     message(FATAL_ERROR "${SIGNAL_CLI_JAR} not found. Please set SIGNAL_CLI_LIB_DIR to the directory with signal-cli's jar files.")

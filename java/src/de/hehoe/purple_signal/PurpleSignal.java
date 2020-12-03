@@ -116,11 +116,11 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		receiverThread.start();
 	}
 
-	public void registerAccount(boolean voiceVerification) throws IOException {
+	public void registerAccount(boolean voiceVerification, String captcha) throws IOException {
 		if (this.manager == null) {
 			this.manager = Manager.init(username, dataPath, serviceConfiguration, BaseConfig.USER_AGENT);
 		}
-		this.manager.register(voiceVerification);
+		this.manager.register(voiceVerification, captcha);
 		askVerificationCodeNatively(this.connection);
 	}
 
@@ -291,7 +291,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 					this.manager.sendGroupMessage(message, null, groupId);
 				}
 				return 1;
-			} catch (IOException | AttachmentInvalidException | EncapsulatedExceptions | InvalidNumberException
+			} catch (IOException | AttachmentInvalidException | InvalidNumberException
 					| GroupIdFormatException | GroupNotFoundException | NotAGroupMemberException e) {
 				e.printStackTrace();
 				handleErrorNatively(this.connection, "Exception while sending message: " + e.getMessage());

@@ -100,7 +100,7 @@ signal_ask_register_or_link_ok_cb(PurpleConnection *pc, int choice) {
     try {
         switch (choice) {
             case SIGNAL_ACCOUNT_LINK: sa->ps.link_account(); break;
-            case SIGNAL_ACCOUNT_REGISTER: sa->ps.register_account(false); break;
+            case SIGNAL_ACCOUNT_REGISTER: sa->ps.register_account(false, ""); break;
             case SIGNAL_ACCOUNT_VERIFY: signal_ask_verification_code(pc); break;
             default: purple_debug(PURPLE_DEBUG_ERROR, "signal", "%s\n", "User dialogue returned with invalid choice.");
         }
@@ -117,6 +117,7 @@ signal_ask_register_or_link_cancel_cb(PurpleConnection *pc, int choice) {
 void
 signal_ask_register_or_link(PurpleConnection *pc) {
     PurpleSignalConnection *sa = static_cast<PurpleSignalConnection *>(purple_connection_get_protocol_data(pc));
+    // TODO: offer input for captcha
     purple_request_choice(
         pc, 
         "Unknown account", "Please choose",
@@ -127,7 +128,6 @@ signal_ask_register_or_link(PurpleConnection *pc) {
         pc, 
         "Link to existing account", SIGNAL_ACCOUNT_LINK, 
         "Register new", SIGNAL_ACCOUNT_REGISTER, 
-        //"Re-enter existing verification code", SIGNAL_ACCOUNT_VERIFY, // not acutally an option, I presume
         NULL
     );
 }
