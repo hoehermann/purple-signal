@@ -50,19 +50,24 @@ signal_handle_message_mainthread(gpointer data)
     PurpleConnection *pc = (PurpleConnection *)psm->pc;
     PurpleAccount *acc = (PurpleAccount *)psm->account;
     bool execute = false;
-    if (acc != 0 && signal_check_account_existance(acc)) {
-        execute = true;
-    } else {
-        purple_debug_info(
-            "signal", "Not handling message for non-existant account %p.\n", acc
-        );
+    // TODO: move this check into psm->function?
+    if (acc != 0) {
+        if (signal_check_account_existance(acc)) {
+            execute = true;
+        } else {
+            purple_debug_info(
+                "signal", "Not handling message for non-existant account %p.\n", acc
+            );
+        }
     }
-    if (pc != 0 && signal_check_connection_existance(pc)) {
-        execute = true;
-    } else {
-        purple_debug_info(
-            "signal", "Not handling message for non-existant connection %p.\n", pc
-        );
+    if (pc != 0) {
+        if (signal_check_connection_existance(pc)) {
+            execute = true;
+        } else {
+            purple_debug_info(
+                "signal", "Not handling message for non-existant connection %p.\n", pc
+            );
+        }
     }
     if (execute) {
         try {
