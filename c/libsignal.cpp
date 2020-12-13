@@ -124,6 +124,7 @@ static void
 signal_add_buddy(PurpleConnection *pc, PurpleBuddy *buddy, PurpleGroup *group)
 {
     // does not actually do anything. buddy is added to pidgin's local list and is usable from there.
+    assume_buddy_online(pc->account, buddy);
 }
 
 static GList *
