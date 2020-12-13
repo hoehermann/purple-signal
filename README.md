@@ -47,4 +47,8 @@ For more functionality, check out [purple-signald](https://github.com/hoehermann
 
 ### Known Problems
 
-* It takes two minutes for the internal JVM to shut down. Or it crashes when terminating Pidgin.
+* First message from purple-signal to official signal is not sent properly.
+
+#### Previously Known Problems
+
+* It takes two minutes for the internal JVM to shut down. Or it crashes when terminating Pidgin. This issue miraculously went away.
