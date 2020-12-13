@@ -2,6 +2,7 @@
  * Implementation of Java runtime environment management (create JVM, destroy JVM).
  */
 
+#include <vector>
 #include "handler/async.hpp" // for signal_debug (not really needed)
 #include "environment.hpp"
 
