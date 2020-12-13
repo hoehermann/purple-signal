@@ -12,6 +12,7 @@
 #include "handler/async.hpp"
 #include "handler/account.hpp"
 #include "handler/message.hpp"
+#include "purplesignal/utils.hpp"
 
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleQRCodeNatively(JNIEnv *env, jclass cls, jlong pc, jstring jmessage) {
     const char *message = env->GetStringUTFChars(jmessage, 0);
@@ -67,15 +68,12 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_logNatively(JNI
 }
 
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNatively(JNIEnv *env, jclass cls, jlong pc, jstring jchat, jstring jsender, jstring jmessage, jlong timestamp, jint flags) {
-    const char *chat = env->GetStringUTFChars(jchat, 0);
-    const char *sender = env->GetStringUTFChars(jsender, 0);
-    const char *message = env->GetStringUTFChars(jmessage, 0);
     auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
         [
             pc = reinterpret_cast<PurpleConnection *>(pc),
-            chat = std::string(chat), 
-            sender = std::string(sender), 
-            message = std::string(message), 
+            chat = tjni_jstring_to_stdstring(env, jchat), 
+            sender = tjni_jstring_to_stdstring(env, jsender), 
+            message = tjni_jstring_to_stdstring(env, jmessage), 
             timestamp, 
             flags = static_cast<PurpleMessageFlags>(flags)
         ] () {
@@ -83,9 +81,6 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNa
         }
     );
     PurpleSignalMessage *psm = new PurpleSignalMessage(do_in_main_thread, pc);
-    env->ReleaseStringUTFChars(jmessage, message);
-    env->ReleaseStringUTFChars(jchat, chat);
-    env->ReleaseStringUTFChars(jsender, sender);
     signal_handle_message_async(psm);
 }
 
