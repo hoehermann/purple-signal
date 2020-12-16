@@ -117,9 +117,17 @@ if (MINGW)
     # remove automatic prefix "lib" from build target name
     SET_TARGET_PROPERTIES(${TARGET_NAME} PROPERTIES PREFIX "")
 
-    # TODO: find out why I thought this was necessary
+    # on win32, function names are decorated with @*-suffixes.
+    # aliases are needed for the JVM to find the native functions
+    #TODO: move this to target_link_libraries below
     set_target_properties (${TARGET_NAME} PROPERTIES
         LINK_FLAGS "-Wl,--add-stdcall-alias"
-        CLEAN_DIRECT_OUTPUT 1
+        CLEAN_DIRECT_OUTPUT 1 #TODO: is this necessary?
     )
+
+    # see https://github.com/hoehermann/purple-signal/issues/1#issuecomment-745527414
+    # and https://stackoverflow.com/questions/38694058/cmake-linking-statically-against-libgcc-and-libstdc-into-a-shared-library
+    # but also see https://github.com/kcat/alure/commit/e9f8f60
+    # and https://stackoverflow.com/questions/13768515/how-to-do-static-linking-of-libwinpthread-1-dll-in-mingw
+    target_link_libraries(${TARGET_NAME} -static-libgcc -static-libstdc++)
 endif()

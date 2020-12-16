@@ -1,26 +1,19 @@
 # Sample toolchain file for building for Windows from an Ubuntu Linux system.
-#
-# Typical usage:
-#    *) install cross compiler: `sudo apt-get install mingw-w64`
-#    *) mkdir buildMingw64 && cd buildMingw64
-#    *) cmake -DCMAKE_TOOLCHAIN_FILE=~/Toolchain-Ubuntu-mingw64.cmake ..
-#
+# Usage:
+# cmake -DCMAKE_TOOLCHAIN_FILE=~/toolchain.cmake ..
 
 set(CMAKE_SYSTEM_NAME Windows)
-#set(TOOLCHAIN_PREFIX x86_64-w64-mingw32)
-set(TOOLCHAIN_PREFIX i686-w64-mingw32)
+set(TOOLCHAIN_PREFIX i686-w64-mingw32) # i686 (32 bit) on win64
+set(TOOLCHAIN_VERSION 7.3)
+set(TOOLCHAIN_SUFFIX -win32) # -posix introduces a dependency on winpthreads
 
 # cross compilers to use for C and C++
-#set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-gcc)
-#set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}-g++)
-set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-gcc-posix)
-set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}-g++-posix)
-#set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-gcc-win32)
-#set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}-g++-win32)
+set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-gcc${TOOLCHAIN_SUFFIX})
+set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}-g++${TOOLCHAIN_SUFFIX})
 set(CMAKE_RC_COMPILER ${TOOLCHAIN_PREFIX}-windres)
 
 # target environment on the build host system
-set(CMAKE_FIND_ROOT_PATH /usr/${TOOLCHAIN_PREFIX} /usr/lib/gcc/${TOOLCHAIN_PREFIX}/7.3-posix)
+set(CMAKE_FIND_ROOT_PATH /usr/${TOOLCHAIN_PREFIX} /usr/lib/gcc/${TOOLCHAIN_PREFIX}/${TOOLCHAIN_VERSION}${TOOLCHAIN_SUFFIX})
 
 # modify default behavior of FIND_XXX() commands to
 # search for headers/libs in the target environment and

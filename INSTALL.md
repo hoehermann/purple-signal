@@ -16,7 +16,7 @@ purple-signal now stores the account information in Pidgin's account data store.
   Modify your user's PATH environment variable to include `c:\opt\pidgin;c:\opt\pidgin\Gtk\bin;`
 1. [purple-signal](https://buildbot.hehoe.de/purple-signal/builds/)  
   Both purple-signal.dll and purple_signal.jar are needed.  
-  Put them into `c:\opt\pidgin\plugins`.  
+  Put them into `c:\opt\pidgin\plugins`. Yes, in the Pidgin installation directory. For reasons beyond my understanding, the plug-in cannot not be loaded from user directory.  
   Launch Pidgin, create a new account. Enter your phone number (internationalized format +491234567890) for a username. Set the signal-cli path to `c:\opt\signal-cli\lib`.
 
 *) It may or may not be necessary for that directory *not* to have spaces in the entire path. The default `C:\Program Files (x86)` may *not* work. I did not check thoroughly.
