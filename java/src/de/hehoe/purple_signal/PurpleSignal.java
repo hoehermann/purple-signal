@@ -99,15 +99,17 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			String linkedUsername = null;
 			try {
 				linkedUsername = provisioningManager.finishDeviceLink("purple-signal");
-			} catch (IOException | InvalidKeyException | TimeoutException | UserAlreadyExists e) {
+				if (!this.username.equals(linkedUsername)) {
+					handleErrorNatively(this.connection, String.format(
+							"Configured username %s does not match linked number %s.", this.username, linkedUsername));
+				} else {
+					handleErrorNatively(this.connection, "Linking finished. Reconnect needed.");
+				}
+			} catch (UserAlreadyExists e) {
+				handleErrorNatively(this.connection, "Unable to finish device link: User already exists locally. Delete Pidgin/libpurple account and try again.");
+			} catch (IOException | InvalidKeyException | TimeoutException e) {
 				handleErrorNatively(this.connection, "Unable to finish device link: " + e.getMessage());
 				e.printStackTrace();
-			}
-			if (!linkedUsername.equals(this.username)) {
-				handleErrorNatively(this.connection, String.format(
-						"Configured username %s does not match linked number %s.", this.username, linkedUsername));
-			} else {
-				handleErrorNatively(this.connection, "Linking finished. Reconnect needed.");
 			}
 
 		});
