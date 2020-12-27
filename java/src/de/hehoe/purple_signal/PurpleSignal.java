@@ -147,7 +147,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 						ignoreAttachments, this);
 			}
 		} catch (Exception e) {
-			handleErrorNatively(this.connection, "Exception while waiting for message: " + e.getMessage());
+			handleErrorNatively(this.connection, "Exception while waiting for message: " + e.getMessage(), false);
 		} catch (Throwable t) {
 			handleErrorNatively(this.connection, "Unhandled exception while waiting for message.");
 			t.printStackTrace();
@@ -194,7 +194,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		// signal-cli/src/main/java/org/asamk/signal/JsonMessageEnvelope.java and
 		// signal-cli/src/main/java/org/asamk/signal/ReceiveMessageHandler.java
 		if (exception != null) {
-			handleErrorNatively(this.connection, "Exception while handling message: " + exception.getMessage());
+			handleErrorNatively(this.connection, "Exception while handling message: " + exception.getMessage(), false);
 		} else if (envelope == null) {
 			handleErrorNatively(this.connection, "Handling null envelope."); // this should never happen
 		} else {
@@ -322,7 +322,11 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	public static native void handleMessageNatively(long connection, String chat, String sender, String content,
 			long timestamp, int flags);
 
-	public static native void handleErrorNatively(long connection, String error);
+	public static native void handleErrorNatively(long connection, String error, boolean fatal);
+	
+	public static void handleErrorNatively(long connection, String error) {
+		handleErrorNatively(connection, error, true);
+	}
 
 	public static native void askRegisterOrLinkNatively(long connection);
 
