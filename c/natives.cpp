@@ -13,6 +13,7 @@
 #include "handler/account.hpp"
 #include "handler/message.hpp"
 #include "purplesignal/utils.hpp"
+#include "purplesignal/error.hpp"
 
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleQRCodeNatively(JNIEnv *env, jclass cls, jlong pc, jstring jmessage) {
     auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
@@ -51,8 +52,11 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_askVerification
 
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleErrorNatively(JNIEnv *env, jclass cls, jlong pc, jstring jmessage, jboolean fatal) {
     auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
-        [message = tjni_jstring_to_stdstring(env, jmessage)] () {
-            throw std::runtime_error(message);
+        [
+            message = tjni_jstring_to_stdstring(env, jmessage),
+            fatal
+        ] () {
+            throw PurpleSignalError(message, fatal);
         }
     );
     PurpleSignalMessage *psm = new PurpleSignalMessage(do_in_main_thread, pc);

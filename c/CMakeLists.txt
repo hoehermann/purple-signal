@@ -37,6 +37,8 @@ set(SRC_LIST
     purplesignal/message.cpp
     purplesignal/utils.cpp
     purplesignal/utils.hpp
+    purplesignal/error.cpp
+    purplesignal/error.hpp
     submodules/typedjni/typedjni.hpp
     submodules/typedjni/typedjni.cpp
     submodules/qrcode/cpp/QrCode.cpp

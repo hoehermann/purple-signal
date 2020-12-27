@@ -5,6 +5,7 @@
 #include <purple.h>
 #include "../purple_compat.h"
 #include "async.hpp"
+#include "../purplesignal/error.hpp"
 
 gboolean
 signal_check_connection_existance(PurpleConnection *pc) {
@@ -72,6 +73,15 @@ signal_handle_message_mainthread(gpointer data)
     if (execute) {
         try {
             (*psm->function)();
+        } catch (PurpleSignalError & e) {
+            // PurpleSignalError are not thrown without connection – assume pc is valid
+            PurpleConnectionError error = PURPLE_CONNECTION_ERROR_OTHER_ERROR;
+            if (!e.is_fatal) {
+                // not a fatal error – try to reconnect
+                // this error type is one of the few indicating a non-fatal error
+                error = PURPLE_CONNECTION_ERROR_NETWORK_ERROR;
+            }
+            purple_connection_error(pc, error, e.what());
         } catch (std::exception & e) {
             if (pc != 0) {
                 purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, e.what());
