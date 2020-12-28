@@ -12,6 +12,8 @@ set(CMAKE_JAVA_INCLUDE_PATH ${SIGNAL_CLI_JARS})
 
 include(UseJava)
 
+set(CMAKE_JAVA_COMPILE_FLAGS -encoding utf-8)
+
 # https://stackoverflow.com/questions/3179216/what-is-the-convention-for-word-separator-in-java-package-names
 add_jar(purple_signal 
     src/de/hehoe/purple_signal/PurpleSignal.java

@@ -1,8 +1,10 @@
 # based on skype4pidgin/skypeweb/CMakeLists.txt
 
 find_package(JNI REQUIRED)
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(PURPLE REQUIRED purple)
+find_package(PkgConfig)
+if (PKG_CONFIG_FOUND)
+	pkg_check_modules(PURPLE REQUIRED purple)
+endif()
 
 message(STATUS
 "PURPLE_INCLUDE_DIRS: ${PURPLE_INCLUDE_DIRS}"
@@ -13,6 +15,9 @@ message(STATUS
 
 # TODO: check for DIRENT_INCLUDE_DIRS on Windows
 # obtainable from https://github.com/tronkko/dirent/blob/master/include/dirent.h
+#include(CheckIncludeFileCXX)
+#set(CMAKE_REQUIRED_INCLUDES ...)
+#CHECK_INCLUDE_FILE_CXX(dirent.h DIRENT_HEADER_FOUND) ...
 
 set(SRC_LIST
     purple_compat.h
@@ -45,7 +50,7 @@ set(SRC_LIST
     submodules/qrcode/cpp/QrCode.hpp
     )
 
-#set (CMAKE_CXX_STANDARD 14)
+#set(CMAKE_CXX_STANDARD 17)
 
 set(TARGET_NAME ${PROJECT_NAME})
 
@@ -56,18 +61,20 @@ if (${MINGW_CROSSCOMPILING})
 target_compile_definitions(${TARGET_NAME} PRIVATE MINGW_CROSSCOMPILING)
 endif()
 
-target_compile_options(${TARGET_NAME} PRIVATE 
-    -Werror 
-    -Wall 
-    #-Wextra 
-    #-Wconversion 
-    #-Wsign-conversion 
-    -Wsign-compare
-    # TODO: push these when including purple.h only
-    -DGLIB_DISABLE_DEPRECATION_WARNINGS
-    -Wno-write-strings
-    -Wno-parentheses
-)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	target_compile_options(${TARGET_NAME} PRIVATE 
+		-Werror 
+		-Wall 
+		#-Wextra 
+		#-Wconversion 
+		#-Wsign-conversion 
+		-Wsign-compare
+		# TODO: push these when including purple.h only
+		-DGLIB_DISABLE_DEPRECATION_WARNINGS
+		-Wno-write-strings
+		-Wno-parentheses
+	)
+endif()
 
 target_include_directories(${TARGET_NAME} PRIVATE
     ${PURPLE_INCLUDE_DIRS}
@@ -99,15 +106,16 @@ if (EMBED_JAVA_BYTECODE)
         )
 endif()
 
-exec_program("${PKG_CONFIG_EXECUTABLE} --variable=plugindir purple 2>/dev/null"
-    OUTPUT_VARIABLE LIB_INSTALL_DIR
-    RETURN_VALUE PURPLE_PLUGINDIR_RET
-    )
-
-if (NOT PURPLE_PLUGINDIR_RET EQUAL 0)
-    message(WARNING "${PKG_CONFIG_EXECUTABLE} --variable=plugindir purple -- returned a non-null error code")
-else()
-    install(TARGETS ${TARGET_NAME} DESTINATION ${LIB_INSTALL_DIR})
+if (PKG_CONFIG_FOUND)
+	exec_program("${PKG_CONFIG_EXECUTABLE} --variable=plugindir purple 2>/dev/null"
+		OUTPUT_VARIABLE LIB_INSTALL_DIR
+		RETURN_VALUE PURPLE_PLUGINDIR_RET
+		)
+	if (NOT PURPLE_PLUGINDIR_RET EQUAL 0)
+		message(WARNING "${PKG_CONFIG_EXECUTABLE} --variable=plugindir purple -- returned a non-null error code")
+	else()
+		install(TARGETS ${TARGET_NAME} DESTINATION ${LIB_INSTALL_DIR})
+	endif()
 endif()
 
 file(STRINGS "../VERSION" SIGNAL_PLUGIN_VERSION)
