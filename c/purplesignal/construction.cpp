@@ -3,8 +3,8 @@
  */
 
 #include "purplesignal.hpp"
-#include "../handler/async.hpp" // for signal_debug (not really needed)
 #include "utils.hpp"
+#include "../handler/async.hpp" // for signal_debug (not really needed)
 
 PurpleSignal::PurpleSignal(TypedJNIEnv *jvm, uintptr_t connection, uintptr_t account, const std::string & username) : 
     jvm(jvm), instance(jvm->find_class("de/hehoe/purple_signal/PurpleSignal").GetConstructor<jlong,jlong,jstring>()(

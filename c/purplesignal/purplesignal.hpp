@@ -21,6 +21,5 @@ class PurpleSignal {
     void verify_account(const std::string & code, const std::string & pin);
     
     // messaging
-    int send(const char *who, const char *message);
+    int send_im(const std::string& who, const std::string& message);
 };
-

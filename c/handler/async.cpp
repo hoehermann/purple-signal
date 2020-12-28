@@ -2,10 +2,10 @@
  * Implementation of handlers for asynchronous calls into purple GTK (Java → C).
  */
  
-#include <purple.h>
-#include "../purple_compat.h"
 #include "async.hpp"
 #include "../purplesignal/error.hpp"
+#include "../purple_compat.h"
+#include <purple.h>
 
 gboolean
 signal_check_connection_existance(PurpleConnection *pc) {
@@ -109,7 +109,6 @@ signal_handle_message_async(PurpleSignalMessage *psm)
 void signal_debug(PurpleDebugLevel level, const std::string & message) {
     purple_debug(level, "signal", "%s\n", message.c_str());
 }
-
 
 PurpleSignalMessage::PurpleSignalMessage(std::unique_ptr<PurpleSignalConnectionFunction> & function, uintptr_t pc, uintptr_t account) : 
     pc(pc), account(account), function(std::move(function)) {};

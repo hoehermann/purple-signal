@@ -1,6 +1,7 @@
 #pragma once
 
 #include "submodules/typedjni/typedjni.hpp"
+#include <string>
 
 class PurpleSignalEnvironment {
     private:

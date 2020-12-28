@@ -3,11 +3,11 @@
  * This is all to be executed on the main purple thread.
  */
 
+#include "account.hpp"
+#include "../connection.hpp"
+#include "../submodules/qrcode/cpp/QrCode.hpp"
 #include <sstream>
 #include "../purple_compat.h"
-#include "../submodules/qrcode/cpp/QrCode.hpp"
-#include "../connection.hpp"
-#include "account.hpp"
 
 void signal_show_qr_code(PurpleConnection *pc, const std::string & qr_code_ppm, const std::string & qr_raw_data) {
     PurpleSignalConnection *sa = static_cast<PurpleSignalConnection *>(purple_connection_get_protocol_data(pc));

@@ -2,8 +2,8 @@
  * Implementation of all glue (C → Java) for account management (register, link verify).
  */
 
-#include "purplesignal.hpp"
 #include "utils.hpp"
+#include "purplesignal.hpp"
 
 void PurpleSignal::register_account(bool voice, const std::string & captcha) {
     instance.GetMethod<void(jboolean, jstring)>("registerAccount")(voice, jvm->make_jstring(captcha));

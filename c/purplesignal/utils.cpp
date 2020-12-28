@@ -2,11 +2,9 @@
  * Utility functions when doing JNI stuff.
  */
 
+#include "utils.hpp"
 #include <locale>
 #include <codecvt>
-
-#include "utils.hpp"
-
 
 std::string tjni_jstring_to_stdstring(JNIEnv *env, jstring jstr) {
     // based on https://stackoverflow.com/questions/5859673/

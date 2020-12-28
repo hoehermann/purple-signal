@@ -4,9 +4,10 @@
 
 #pragma once
 
-#include <memory>
 #include <functional>
-#include <purple.h>
+#include <memory>
+#include <string>
+#include <purple.h> // for PurpleDebugLevel
 
 typedef std::function<void()> PurpleSignalConnectionFunction;
 
