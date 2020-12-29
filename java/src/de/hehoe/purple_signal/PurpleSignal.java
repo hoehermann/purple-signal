@@ -3,12 +3,14 @@ package de.hehoe.purple_signal;
 import java.security.Security;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.asamk.signal.manager.AttachmentInvalidException;
+import org.asamk.signal.manager.GroupId;
 import org.asamk.signal.manager.GroupNotFoundException;
 import org.asamk.signal.manager.Manager;
 import org.asamk.signal.manager.Manager.ReceiveMessageHandler;
@@ -33,7 +35,7 @@ import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptio
 import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.util.Base64;
-import org.asamk.signal.util.GroupIdFormatException;
+import org.asamk.signal.manager.GroupIdFormatException;
 
 public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
@@ -43,8 +45,9 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	private Thread receiverThread = null;
 	private String username = null;
 	private final SignalServiceConfiguration serviceConfiguration;
-	private final String dataPath = null; 
-	// dataPath is not actually being used. All data is redirected to libpurple's internal storage (see adjustments made in signal-cli submodule).
+	private final File dataPath = null; 
+	// dataPath is not actually being used. All data is redirected to libpurple's internal storage
+	// (see adjustments made to org.asamk.signal.manager.storageSignalAccount in signal-cli submodule).
 	// dataPath remains in method calls so the signatures remain the same.
 	// TODO maybe use this to forward the account pointer to manager and storage? ugly but could work
 
@@ -290,7 +293,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 				if (who.startsWith("+")) {
 					this.manager.sendMessage(message, null, Arrays.asList(who)); // https://stackoverflow.com/questions/20358883/
 				} else {
-					byte[] groupId = Util.decodeGroupId(who);
+					GroupId groupId = Util.decodeGroupId(who);
 					this.manager.sendGroupMessage(message, null, groupId);
 				}
 				return 1;
