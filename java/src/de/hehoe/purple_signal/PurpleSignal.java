@@ -4,11 +4,13 @@ import java.security.Security;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import java.io.IOException;
+import java.io.File;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.asamk.signal.manager.AttachmentInvalidException;
+import org.asamk.signal.manager.GroupId;
 import org.asamk.signal.manager.GroupNotFoundException;
 import org.asamk.signal.manager.Manager;
 import org.asamk.signal.manager.Manager.ReceiveMessageHandler;
@@ -33,7 +35,7 @@ import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptio
 import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.util.Base64;
-import org.asamk.signal.util.GroupIdFormatException;
+import org.asamk.signal.manager.GroupIdFormatException;
 
 public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
@@ -43,7 +45,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	private Thread receiverThread = null;
 	private String username = null;
 	private final SignalServiceConfiguration serviceConfiguration;
-	private final String dataPath;
+	private final File dataPath;
 
 	private class BaseConfig {
 		private static final String USER_AGENT = "purple-signal";
@@ -56,7 +58,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		this.connection = connection;
 		this.username = username;
 		this.keepReceiving = false;
-		this.dataPath = dataPath;
+		this.dataPath = new File(dataPath);
 
 		// stolen from signald/src/main/java/io/finn/signald/Main.java
 		// Workaround for BKS truststore
@@ -69,7 +71,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
 			// the rest is adapted from signal-cli/src/main/java/org/asamk/signal/Main.java
 
-			this.manager = Manager.init(username, dataPath, serviceConfiguration, BaseConfig.USER_AGENT);
+			this.manager = Manager.init(username, this.dataPath, serviceConfiguration, BaseConfig.USER_AGENT);
 			// exception may bubble to C++
 
 			{
@@ -289,7 +291,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 				if (who.startsWith("+")) {
 					this.manager.sendMessage(message, null, Arrays.asList(who)); // https://stackoverflow.com/questions/20358883/
 				} else {
-					byte[] groupId = Util.decodeGroupId(who);
+					GroupId groupId = Util.decodeGroupId(who);
 					this.manager.sendGroupMessage(message, null, groupId);
 				}
 				return 1;
