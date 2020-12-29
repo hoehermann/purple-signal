@@ -1,6 +1,6 @@
 # purple-signal
 
-A libpurple/Pidgin plugin based on [signal-cli](https://github.com/AsamK/signal-cli) (for signal, formerly textsecure).
+A libpurple/Pidgin plugin for signal (formerly textsecure). Using [modified parts](https://github.com/hoehermann/signal-cli/) of [signal-cli](https://github.com/AsamK/signal-cli) which in turn is employing [a fork of the official implementation](https://github.com/Turasa/libsignal-service-java).
 
 Developed on Ubuntu 18.04. Tested wine 5.0 and Windows 10.
 
@@ -48,6 +48,7 @@ For more functionality, check out [purple-signald](https://github.com/hoehermann
 ### Known Problems
 
 * First message from purple-signal to official signal is not sent properly.
+* Windows binary is almost unusable.
 
 #### Previously Known Problems
 
