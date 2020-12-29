@@ -17,7 +17,8 @@ class PurpleSignalConnection {
     PurpleSignalConnection(
         PurpleAccount *account, 
         PurpleConnection *pc, 
-        const std::string & signal_lib_directory, const std::string & settings_directory, const std::string & username
+        const std::string & signal_lib_directory, 
+        const std::string & username
     );
     virtual ~PurpleSignalConnection();
 };

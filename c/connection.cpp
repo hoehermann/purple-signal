@@ -12,11 +12,12 @@
 PurpleSignalConnection::PurpleSignalConnection(
     PurpleAccount *account, 
     PurpleConnection *pc, 
-    const std::string & signal_lib_directory, const std::string & settings_directory, const std::string & username
+    const std::string & signal_lib_directory, 
+    const std::string & username
 ) :
     account(account), 
     connection(pc),
-    ps(uintptr_t(pc), uintptr_t(account), PurpleSignalEnvironment::get(signal_lib_directory), settings_directory, username) {
+    ps(PurpleSignalEnvironment::get(signal_lib_directory), uintptr_t(pc), uintptr_t(account), username) {
 };
     
 PurpleSignalConnection::~PurpleSignalConnection() {

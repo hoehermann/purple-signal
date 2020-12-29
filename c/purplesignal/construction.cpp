@@ -6,9 +6,9 @@
 #include "../handler/async.hpp" // for signal_debug (not really needed)
 #include "utils.hpp"
 
-PurpleSignal::PurpleSignal(uintptr_t connection, uintptr_t account, TypedJNIEnv *jvm, const std::string & settings_directory, const std::string & username) : 
-    jvm(jvm), instance(jvm->find_class("de/hehoe/purple_signal/PurpleSignal").GetConstructor<jlong,jlong,jstring,jstring>()(
-        connection, account, jvm->make_jstring(username), jvm->make_jstring(settings_directory)
+PurpleSignal::PurpleSignal(TypedJNIEnv *jvm, uintptr_t connection, uintptr_t account, const std::string & username) : 
+    jvm(jvm), instance(jvm->find_class("de/hehoe/purple_signal/PurpleSignal").GetConstructor<jlong,jlong,jstring>()(
+        connection, account, jvm->make_jstring(username)
     )) {
     send_message = instance.GetMethod<jint(jstring,jstring)>("sendMessage");
     tjni_exception_check(jvm);

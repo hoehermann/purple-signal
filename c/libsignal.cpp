@@ -24,8 +24,6 @@
 
 #define SIGNAL_OPTION_LIBDIR "signal-cli-lib-dir"
 #define SIGNAL_DEFAULT_LIBDIR ""
-#define SIGNAL_OPTION_SETTINGS_DIR "signal-cli-settings-dir"
-#define SIGNAL_DEFAULT_SETTINGS_DIR ""
 
 #include "libsignal.hpp"
 #include "connection.hpp"
@@ -65,14 +63,9 @@ signal_login(PurpleAccount *account)
     | PURPLE_CONNECTION_NO_BGCOLOR);
     purple_connection_set_flags(pc, pc_flags);
 
-    std::string settings_dir(purple_account_get_string(account, SIGNAL_OPTION_SETTINGS_DIR, SIGNAL_DEFAULT_SETTINGS_DIR));
-    if (settings_dir == "") {
-        settings_dir = std::string(purple_user_dir()) + "/signal";
-    }
-
     try {
         purple_connection_set_state(pc, PURPLE_CONNECTION_CONNECTING);
-        PurpleSignalConnection *sa = new PurpleSignalConnection(account, pc, libdir, settings_dir, purple_account_get_username(account));
+        PurpleSignalConnection *sa = new PurpleSignalConnection(account, pc, libdir, purple_account_get_username(account));
         purple_connection_set_protocol_data(pc, sa);
         purple_connection_set_state(pc, PURPLE_CONNECTION_CONNECTED);
         assume_all_buddies_online(account);

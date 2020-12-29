@@ -43,20 +43,22 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	private Thread receiverThread = null;
 	private String username = null;
 	private final SignalServiceConfiguration serviceConfiguration;
-	private final String dataPath;
+	private final String dataPath = null; 
+	// dataPath is not actually being used. All data is redirected to libpurple's internal storage (see adjustments made in signal-cli submodule).
+	// dataPath remains in method calls so the signatures remain the same.
+	// TODO maybe use this to forward the account pointer to manager and storage? ugly but could work
 
 	private class BaseConfig {
 		private static final String USER_AGENT = "purple-signal";
 	}
 
-	public PurpleSignal(long connection, long account, String username, String dataPath)
+	public PurpleSignal(long connection, long account, String username)
 			throws IOException, TimeoutException, InvalidKeyException, UserAlreadyExists {
 		serviceConfiguration = ServiceConfig.createDefaultServiceConfiguration(BaseConfig.USER_AGENT);
 
 		this.connection = connection;
 		this.username = username;
 		this.keepReceiving = false;
-		this.dataPath = dataPath;
 
 		// stolen from signald/src/main/java/io/finn/signald/Main.java
 		// Workaround for BKS truststore
@@ -66,11 +68,10 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		if (!SignalAccount.userExists(account)) {
 			askRegisterOrLinkNatively(this.connection);
 		} else {
-
 			// the rest is adapted from signal-cli/src/main/java/org/asamk/signal/Main.java
 
 			this.manager = Manager.init(username, dataPath, serviceConfiguration, BaseConfig.USER_AGENT);
-			// exception may bubble to C++
+			// exceptions from init not caught, may bubble to C++
 
 			{
 				Manager m = this.manager;
