@@ -105,8 +105,9 @@ static int
 signal_send_im(PurpleConnection *pc, const gchar *who, const gchar *message, PurpleMessageFlags flags)
 {
     PurpleSignalConnection *sa = (PurpleSignalConnection *)purple_connection_get_protocol_data(pc);
+    char *m = purple_markup_strip_html(message); // related: https://github.com/majn/telegram-purple/issues/12 and https://github.com/majn/telegram-purple/commit/fffe7519d7269cf4e5029a65086897c77f5283ac
     try {
-        return sa->ps.send(who, message);
+        return sa->ps.send(who, m);
     } catch (std::exception & e) {
         purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, e.what());
         return -1;
