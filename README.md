@@ -48,8 +48,5 @@ For more functionality, check out [purple-signald](https://github.com/hoehermann
 ### Known Problems
 
 * First message from purple-signal to official signal is not sent properly.
-* Windows binary is almost unusable.
-
-#### Previously Known Problems
-
-* It takes two minutes for the internal JVM to shut down. Or it crashes when terminating Pidgin. This issue miraculously went away.
+* Windows binary is almost completely unusable.
+* It takes two minutes for the internal JVM to shut down. Or it crashes when terminating Pidgin. This issue disappears and reappears erratically.

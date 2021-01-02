@@ -15,7 +15,7 @@ include(UseJava)
 # https://stackoverflow.com/questions/3179216/what-is-the-convention-for-word-separator-in-java-package-names
 add_jar(purple_signal 
     src/de/hehoe/purple_signal/PurpleSignal.java
-    submodules/signal-cli/src/main/java/org/asamk/signal/storage/SignalAccount.java
+    submodules/signal-cli/src/main/java/org/asamk/signal/manager/storage/SignalAccount.java
     submodules/signal-cli/src/main/java/org/asamk/signal/manager/Manager.java
     src/de/hehoe/purple_signal/SignalMessagePrinter.java
     ENTRY_POINT de/hehoe/purple_signal/PurpleSignal

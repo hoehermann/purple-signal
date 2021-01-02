@@ -9,7 +9,7 @@ purple-signal now stores the account information in Pidgin's account data store.
 1. [a x86 (32-bit) Java](https://adoptopenjdk.net/releases.html), e.g. [11.0.9](https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.9%2B11.1/OpenJDK11U-jdk_x86-32_windows_hotspot_11.0.9_11.zip)  
   Unpack it to a directory*. I assume `c:\opt\openjdk-11`.
   Modify your user's PATH environment variable to include `c:\opt\openjdk-11\jre\bin\client;`.
-1. [signal-cli](https://github.com/AsamK/signal-cli/releases/tag/v0.6.12)  
+1. [signal-cli](https://github.com/AsamK/signal-cli/releases/tag/v0.7.2)  
   Unpack it to a directory*. I assume `c:\opt\signal-cli`.  
 1. [Pidgin](https://sourceforge.net/projects/pidgin/files/Pidgin/2.13.0/pidgin-2.13.0-offline.exe/download)  
   Install it to a directory*. I assume `c:\opt\pidgin`.  
@@ -25,7 +25,7 @@ purple-signal now stores the account information in Pidgin's account data store.
 
 1. Java  
   Have a Java JRE installed (tested with OpenJDK 11). Architecture should match your system (must match Pidgin's machine type).
-1. [signal-cli](https://github.com/AsamK/signal-cli/releases/tag/v0.6.12)  
+1. [signal-cli](https://github.com/AsamK/signal-cli/releases/tag/v0.7.2)  
   Unpack it to a directory* spaces. I assume `/opt/signal-cli`.
 1. Pidgin  
   Installed via your distribution's package manager.

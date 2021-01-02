@@ -10,18 +10,21 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.asamk.signal.manager.AttachmentInvalidException;
-import org.asamk.signal.manager.GroupId;
-import org.asamk.signal.manager.GroupNotFoundException;
 import org.asamk.signal.manager.Manager;
 import org.asamk.signal.manager.Manager.ReceiveMessageHandler;
-import org.asamk.signal.manager.NotAGroupMemberException;
 import org.asamk.signal.manager.ProvisioningManager;
 import org.asamk.signal.manager.ServiceConfig;
 import org.asamk.signal.manager.UserAlreadyExists;
-import org.asamk.signal.storage.SignalAccount;
+import org.asamk.signal.manager.groups.GroupId;
+import org.asamk.signal.manager.groups.GroupIdFormatException;
+import org.asamk.signal.manager.groups.GroupNotFoundException;
+import org.asamk.signal.manager.groups.NotAGroupMemberException;
+import org.asamk.signal.manager.storage.SignalAccount;
 import org.asamk.signal.util.SecurityProvider;
 import org.asamk.signal.util.Util;
 import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.signalservice.api.KeyBackupServicePinException;
+import org.whispersystems.signalservice.api.KeyBackupSystemNoDataException;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
@@ -35,7 +38,6 @@ import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptio
 import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.util.Base64;
-import org.asamk.signal.manager.GroupIdFormatException;
 
 public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
@@ -130,7 +132,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		askVerificationCodeNatively(this.connection);
 	}
 
-	public void verifyAccount(String verificationCode, String pin) throws IOException {
+	public void verifyAccount(String verificationCode, String pin) throws IOException, KeyBackupServicePinException, KeyBackupSystemNoDataException {
 		this.manager.verifyAccount(verificationCode, pin);
 		handleErrorNatively(this.connection, "Verification finished. Reconnect needed.");
 	}
@@ -319,7 +321,9 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	final int PURPLE_MESSAGE_DELAYED = 0x0400;
 	final int PURPLE_MESSAGE_REMOTE_SEND = 0x10000;
 
-	final static int DEBUG_LEVEL_INFO = 1; // from libpurple/debug.h
+	 // from libpurple/debug.h:
+	public final static int DEBUG_LEVEL_INFO = 2;
+	public final static int DEBUG_LEVEL_ERROR = 4;
 
 	public static native void logNatively(int level, String text);
 
