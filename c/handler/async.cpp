@@ -7,28 +7,7 @@
 #include "../purple_compat.h"
 #include <purple.h>
 
-gboolean
-signal_check_connection_existance(PurpleConnection *pc) {
-    int connection_exists = false;
-    {
-        GList * connection = purple_connections_get_connecting();
-        while (connection != NULL && connection_exists == false) {
-            connection_exists = connection->data == pc;
-            connection = connection->next;
-        }
-    }
-    {
-        GList * connection = purple_connections_get_all();
-        while (connection != NULL && connection_exists == false) {
-            connection_exists = connection->data == pc;
-            connection = connection->next;
-        }
-    }
-    return connection_exists;
-}
-
-gboolean
-signal_check_account_existance(PurpleAccount *acc) {
+bool signal_purple_account_exists(PurpleAccount *acc) {
     int account_exists = false;
     for (GList *iter = purple_accounts_get_all(); iter != nullptr && account_exists == false; iter = iter->next) {
         const PurpleAccount *account = (PurpleAccount *)iter->data;
@@ -37,6 +16,14 @@ signal_check_account_existance(PurpleAccount *acc) {
         };
     }
     return account_exists;
+}
+
+PurpleConnection * signal_purple_account_get_connection(PurpleAccount *acc) {
+    if (signal_purple_account_exists(acc)) {
+        return purple_account_get_connection(acc);
+    } else {
+        return NULL;
+    }
 }
 
 /*
@@ -48,48 +35,31 @@ gboolean
 signal_handle_message_mainthread(gpointer data)
 {
     PurpleSignalMessage *psm = (PurpleSignalMessage *)data;
-    PurpleConnection *pc = (PurpleConnection *)psm->pc;
     PurpleAccount *acc = (PurpleAccount *)psm->account;
-    bool execute = false;
-    // TODO: move this check into psm->function?
-    if (acc != 0) {
-        if (signal_check_account_existance(acc)) {
-            execute = true;
-        } else {
-            purple_debug_info(
-                "signal", "Not handling message for non-existant account %p.\n", acc
-            );
-        }
-    }
-    if (pc != 0) {
-        if (signal_check_connection_existance(pc)) {
-            execute = true;
-        } else {
-            purple_debug_info(
-                "signal", "Not handling message for non-existant connection %p.\n", pc
-            );
-        }
-    }
-    if (execute) {
-        try {
-            (*psm->function)();
-        } catch (PurpleSignalError & e) {
-            // PurpleSignalError are not thrown without connection – assume pc is valid
+    try {
+        (*psm->function)();
+    } catch (PurpleSignalError & e) {
+        PurpleConnection *pc = signal_purple_account_get_connection(acc);
+        if (pc) {
             PurpleConnectionError error = PURPLE_CONNECTION_ERROR_OTHER_ERROR;
             if (!e.is_fatal) {
                 // not a fatal error – try to reconnect
-                // this error type is one of the few indicating a non-fatal error
-                error = PURPLE_CONNECTION_ERROR_NETWORK_ERROR;
+                error = PURPLE_CONNECTION_ERROR_NETWORK_ERROR; // this error type is one of the few indicating a non-fatal error
             }
             purple_connection_error(pc, error, e.what());
-        } catch (std::exception & e) {
-            if (pc != 0) {
-                purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, e.what());
-            } else {
-                purple_debug_error(
-                    "signal", "Error handling asynchronous message without connection: %s\n", e.what()
-                );
-            }
+        } else {
+            purple_debug_error(
+                "signal", "Error handling asynchronous message without connection: %s\n", e.what()
+            );
+        }
+    } catch (std::exception & e) {
+        PurpleConnection *pc = signal_purple_account_get_connection(acc);
+        if (pc) {
+            purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, e.what());
+        } else {
+            purple_debug_error(
+                "signal", "Error handling asynchronous message without connection: %s\n", e.what()
+            );
         }
     }
     delete psm;
@@ -110,5 +80,4 @@ void signal_debug(PurpleDebugLevel level, const std::string & message) {
     purple_debug(level, "signal", "%s\n", message.c_str());
 }
 
-PurpleSignalMessage::PurpleSignalMessage(std::unique_ptr<PurpleSignalConnectionFunction> & function, uintptr_t pc, uintptr_t account) : 
-    pc(pc), account(account), function(std::move(function)) {};
+PurpleSignalMessage::PurpleSignalMessage(std::unique_ptr<PurpleSignalConnectionFunction> & function, uintptr_t account) : account(account), function(std::move(function)) {};

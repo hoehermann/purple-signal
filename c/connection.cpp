@@ -17,7 +17,7 @@ PurpleSignalConnection::PurpleSignalConnection(
 ) :
     account(account), 
     connection(pc),
-    ps(PurpleSignalEnvironment::get(signal_lib_directory), uintptr_t(pc), uintptr_t(account), username) {
+    ps(PurpleSignalEnvironment::get(signal_lib_directory), uintptr_t(account), username) {
 };
     
 PurpleSignalConnection::~PurpleSignalConnection() {

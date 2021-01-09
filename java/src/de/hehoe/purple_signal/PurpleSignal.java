@@ -5,6 +5,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -20,12 +21,17 @@ import org.asamk.signal.manager.groups.GroupIdFormatException;
 import org.asamk.signal.manager.groups.GroupNotFoundException;
 import org.asamk.signal.manager.groups.NotAGroupMemberException;
 import org.asamk.signal.manager.storage.SignalAccount;
+import org.asamk.signal.manager.util.IOUtils;
 import org.asamk.signal.util.SecurityProvider;
 import org.asamk.signal.util.Util;
 import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.InvalidMessageException;
 import org.whispersystems.signalservice.api.KeyBackupServicePinException;
 import org.whispersystems.signalservice.api.KeyBackupSystemNoDataException;
+import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
+import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
+import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
@@ -35,6 +41,7 @@ import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptM
 import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
+import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
 import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.util.Base64;
@@ -42,26 +49,29 @@ import org.whispersystems.util.Base64;
 public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
 	private Manager manager = null;
-	private long connection = 0;
+	private long purpleAccount = 0;
 	private boolean keepReceiving = false;
 	private Thread receiverThread = null;
 	private String username = null;
 	private final SignalServiceConfiguration serviceConfiguration;
-	private final File dataPath = null; 
-	// dataPath is not actually being used. All data is redirected to libpurple's internal storage
-	// (see adjustments made to org.asamk.signal.manager.storageSignalAccount in signal-cli submodule).
+	private final File dataPath = null;
+	// dataPath is not actually being used. All data is redirected to libpurple's
+	// internal storage
+	// (see adjustments made to org.asamk.signal.manager.storageSignalAccount in
+	// signal-cli submodule).
 	// dataPath remains in method calls so the signatures remain the same.
-	// TODO maybe use this to forward the account pointer to manager and storage? ugly but could work
+	// TODO maybe use this to forward the account pointer to manager and storage?
+	// ugly but could work
 
 	private class BaseConfig {
 		private static final String USER_AGENT = "purple-signal";
 	}
 
-	public PurpleSignal(long connection, long account, String username)
+	public PurpleSignal(long purpleAccount, String username)
 			throws IOException, TimeoutException, InvalidKeyException, UserAlreadyExists {
 		serviceConfiguration = ServiceConfig.createDefaultServiceConfiguration(BaseConfig.USER_AGENT);
 
-		this.connection = connection;
+		this.purpleAccount = purpleAccount;
 		this.username = username;
 		this.keepReceiving = false;
 
@@ -70,8 +80,8 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		Security.insertProviderAt(new SecurityProvider(), 1);
 		Security.addProvider(new BouncyCastleProvider());
 
-		if (!SignalAccount.userExists(account)) {
-			askRegisterOrLinkNatively(this.connection);
+		if (!SignalAccount.userExists(this.purpleAccount)) {
+			askRegisterOrLinkNatively(this.purpleAccount);
 		} else {
 			// the rest is adapted from signal-cli/src/main/java/org/asamk/signal/Main.java
 
@@ -84,7 +94,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 					m.checkAccountState();
 				} catch (AuthorizationFailedException e) {
 					logNatively(DEBUG_LEVEL_INFO, "Authorization failed, was the number registered elsewhere?");
-					askRegisterOrLinkNatively(this.connection);
+					askRegisterOrLinkNatively(this.purpleAccount);
 				}
 				// other exceptions may bubble to C++
 			}
@@ -100,21 +110,22 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		ProvisioningManager provisioningManager = new ProvisioningManager(dataPath, serviceConfiguration,
 				BaseConfig.USER_AGENT);
 		String deviceLinkUri = provisioningManager.getDeviceLinkUri();
-		handleQRCodeNatively(this.connection, deviceLinkUri);
+		handleQRCodeNatively(this.purpleAccount, deviceLinkUri);
 		receiverThread = new Thread(() -> {
 			String linkedUsername = null;
 			try {
 				linkedUsername = provisioningManager.finishDeviceLink("purple-signal");
 				if (!this.username.equals(linkedUsername)) {
-					handleErrorNatively(this.connection, String.format(
+					handleErrorNatively(this.purpleAccount, String.format(
 							"Configured username %s does not match linked number %s.", this.username, linkedUsername));
 				} else {
-					handleErrorNatively(this.connection, "Linking finished. Reconnect needed.");
+					handleErrorNatively(this.purpleAccount, "Linking finished. Reconnect needed.");
 				}
 			} catch (UserAlreadyExists e) {
-				handleErrorNatively(this.connection, "Unable to finish device link: User already exists locally. Delete Pidgin/libpurple account and try again.");
+				handleErrorNatively(this.purpleAccount,
+						"Unable to finish device link: User already exists locally. Delete Pidgin/libpurple account and try again.");
 			} catch (IOException | InvalidKeyException | TimeoutException e) {
-				handleErrorNatively(this.connection, "Unable to finish device link: " + e.getMessage());
+				handleErrorNatively(this.purpleAccount, "Unable to finish device link: " + e.getMessage());
 				e.printStackTrace();
 			}
 
@@ -129,12 +140,13 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			this.manager = Manager.init(username, dataPath, serviceConfiguration, BaseConfig.USER_AGENT);
 		}
 		this.manager.register(voiceVerification, captcha);
-		askVerificationCodeNatively(this.connection);
+		askVerificationCodeNatively(this.purpleAccount);
 	}
 
-	public void verifyAccount(String verificationCode, String pin) throws IOException, KeyBackupServicePinException, KeyBackupSystemNoDataException {
+	public void verifyAccount(String verificationCode, String pin)
+			throws IOException, KeyBackupServicePinException, KeyBackupSystemNoDataException {
 		this.manager.verifyAccount(verificationCode, pin);
-		handleErrorNatively(this.connection, "Verification finished. Reconnect needed.");
+		handleErrorNatively(this.purpleAccount, "Verification finished. Reconnect needed.");
 	}
 
 	public void run() {
@@ -153,9 +165,9 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 						ignoreAttachments, this);
 			}
 		} catch (Exception e) {
-			handleErrorNatively(this.connection, "Exception while waiting for message: " + e.getMessage(), false);
+			handleErrorNatively(this.purpleAccount, "Exception while waiting for message: " + e.getMessage(), false);
 		} catch (Throwable t) {
-			handleErrorNatively(this.connection, "Unhandled exception while waiting for message.");
+			handleErrorNatively(this.purpleAccount, "Unhandled exception while waiting for message.");
 			t.printStackTrace();
 		}
 		logNatively(DEBUG_LEVEL_INFO, "Receiving has finished.");
@@ -163,7 +175,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
 	private void startReceiving() {
 		if (receiverThread != null) {
-			handleErrorNatively(this.connection,
+			handleErrorNatively(this.purpleAccount,
 					"Called startReceiving() on a connection already receiving. This is a bug.");
 		} else {
 			this.keepReceiving = true;
@@ -200,15 +212,27 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		// signal-cli/src/main/java/org/asamk/signal/JsonMessageEnvelope.java and
 		// signal-cli/src/main/java/org/asamk/signal/ReceiveMessageHandler.java
 		if (exception != null) {
-			handleErrorNatively(this.connection, "Exception while handling message: " + exception.getMessage(), false);
-		} else if (envelope == null) {
-			handleErrorNatively(this.connection, "Handling null envelope."); // this should never happen
+			if (exception instanceof org.signal.libsignal.metadata.ProtocolNoSessionException) {
+				handleErrorNatively(this.purpleAccount,
+						"No Session. If problem persists, delete local account link or register again.");
+			} else {
+				handleErrorNatively(this.purpleAccount,
+						exception.getClass().getName() + " while handling message: " + exception.getMessage(), false);
+			}
+		}
+		if (envelope == null) {
+			handleErrorNatively(this.purpleAccount, "Handling null envelope."); // this should never happen
 		} else {
 			SignalMessagePrinter.printEnvelope(envelope);
 			String source = null;
 			if (envelope.isUnidentifiedSender()) {
-				logNatively(DEBUG_LEVEL_INFO, "Envelope shows unidentified sender. Using sender from content.");
-				source = content.getSender().getNumber().orNull();
+				logNatively(DEBUG_LEVEL_INFO, "Envelope shows unidentified sender.");
+				if (content == null) {
+					logNatively(DEBUG_LEVEL_INFO, "Message has no readable content.");
+				} else {
+					logNatively(DEBUG_LEVEL_INFO, "Using sender from content.");
+					source = content.getSender().getNumber().orNull();
+				}
 			} else {
 				source = envelope.getSourceAddress().getNumber().orNull();
 			}
@@ -226,7 +250,8 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 					handleDataMessage(content, source);
 					// TODO: do not send receipt until handleMessageNatively returns successfully
 					try {
-						this.manager.sendReceipt(content.getSender(), content.getDataMessage().get().getTimestamp(), SignalServiceReceiptMessage.Type.READ);
+						this.manager.sendReceipt(content.getSender(), content.getDataMessage().get().getTimestamp(),
+								SignalServiceReceiptMessage.Type.READ);
 					} catch (IOException | UntrustedIdentityException e) {
 						logNatively(DEBUG_LEVEL_INFO, "Receipt was not sent successfully: " + e);
 					}
@@ -235,11 +260,12 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 				} else if (content.getTypingMessage().isPresent()) {
 					logNatively(DEBUG_LEVEL_INFO, "Received typing message for " + source + ". Ignoring.");
 				} else if (content.getReceiptMessage().isPresent()) {
-					String description = "[Message "+content.getReceiptMessage().get().getType().toString().toLowerCase()+".]";
-					handleMessageNatively(this.connection, source, source, description, timestamp,
+					String description = "[Message "
+							+ content.getReceiptMessage().get().getType().toString().toLowerCase() + ".]";
+					handleMessageNatively(this.purpleAccount, source, source, description, timestamp,
 							PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
 				} else {
-					handleMessageNatively(this.connection, source, source, "[Received message of unknown type.]",
+					handleMessageNatively(this.purpleAccount, source, source, "[Received message of unknown type.]",
 							timestamp, PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
 				}
 				// TODO: support all message types
@@ -262,12 +288,12 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			}
 			String message = dataMessage.getBody().get();
 			long timestamp = dataMessage.getTimestamp();
-			handleMessageNatively(this.connection, chat, this.username, message, timestamp,
+			handleMessageNatively(this.purpleAccount, chat, this.username, message, timestamp,
 					PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_REMOTE_SEND | PURPLE_MESSAGE_DELAYED
 			// flags copied from EionRobb/purple-discord/blob/master/libdiscord.c
 			);
 		} else {
-			handleMessageNatively(this.connection, sender, sender, "[Received sync message without body.]", 0,
+			handleMessageNatively(this.purpleAccount, sender, sender, "[Received sync message without body.]", 0,
 					PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
 		}
 	}
@@ -279,12 +305,14 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			SignalServiceGroup groupInfo = dataMessage.getGroupContext().get().getGroupV1().get();
 			chat = Base64.encodeBytes(groupInfo.getGroupId());
 		}
+		long timestamp = dataMessage.getTimestamp();
 		if (dataMessage.getBody().isPresent()) {
 			String message = dataMessage.getBody().get();
-			long timestamp = dataMessage.getTimestamp();
-			handleMessageNatively(this.connection, chat, source, message, timestamp, PURPLE_MESSAGE_RECV);
-		} else {
-			handleMessageNatively(this.connection, chat, source, "[Received data message without body.]", 0,
+			handleMessageNatively(this.purpleAccount, chat, source, message, timestamp, PURPLE_MESSAGE_RECV);
+		}
+		if (!dataMessage.getBody().isPresent() && !dataMessage.getAttachments().isPresent()) {
+			handleMessageNatively(this.purpleAccount, chat, source,
+					"[Received data message with neither body nor attachment.]", 0,
 					PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
 		}
 	}
@@ -299,10 +327,10 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 					this.manager.sendGroupMessage(message, null, groupId);
 				}
 				return 1;
-			} catch (IOException | AttachmentInvalidException | InvalidNumberException
-					| GroupIdFormatException | GroupNotFoundException | NotAGroupMemberException e) {
+			} catch (IOException | AttachmentInvalidException | InvalidNumberException | GroupIdFormatException
+					| GroupNotFoundException | NotAGroupMemberException e) {
 				e.printStackTrace();
-				handleErrorNatively(this.connection, "Exception while sending message: " + e.getMessage());
+				handleErrorNatively(this.purpleAccount, "Exception while sending message: " + e.getMessage());
 			}
 		}
 		return 0;
@@ -321,7 +349,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	final int PURPLE_MESSAGE_DELAYED = 0x0400;
 	final int PURPLE_MESSAGE_REMOTE_SEND = 0x10000;
 
-	 // from libpurple/debug.h:
+	// from libpurple/debug.h:
 	public final static int DEBUG_LEVEL_INFO = 2;
 	public final static int DEBUG_LEVEL_ERROR = 4;
 
@@ -331,7 +359,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			long timestamp, int flags);
 
 	public static native void handleErrorNatively(long connection, String error, boolean fatal);
-	
+
 	public static void handleErrorNatively(long connection, String error) {
 		handleErrorNatively(connection, error, true);
 	}
@@ -341,11 +369,11 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	public static native void handleQRCodeNatively(long connection, String deviceLinkUri);
 
 	public static native void askVerificationCodeNatively(long connection);
-	
+
 	public static native String getSettingsStringNatively(long account, String key, String defaultValue);
-	
+
 	public static native void setSettingsStringNatively(long account, String key, String value);
-	
+
 	public static long lookupAccountByUsername(String username) throws IOException {
 		long account = lookupAccountByUsernameNatively(username);
 		if (account == 0) {
@@ -353,6 +381,6 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		}
 		return account;
 	}
-	
+
 	public static native long lookupAccountByUsernameNatively(String username);
 }

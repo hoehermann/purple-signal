@@ -10,7 +10,7 @@ class PurpleSignal {
     
     public:
     PurpleSignal() = delete;
-    PurpleSignal(TypedJNIEnv *jvm, uintptr_t connection, uintptr_t account, const std::string & username);
+    PurpleSignal(TypedJNIEnv *jvm, uintptr_t account, const std::string & username);
     
     // disconnecting
     int close();

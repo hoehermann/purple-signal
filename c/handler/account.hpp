@@ -8,3 +8,5 @@ void signal_show_qr_code(PurpleConnection *pc, const std::string & qr_code_ppm, 
 
 void signal_ask_register_or_link(PurpleConnection *pc);
 void signal_ask_verification_code(PurpleConnection *pc);
+bool signal_purple_account_exists(PurpleAccount *acc);
+PurpleConnection * signal_purple_account_get_connection(PurpleAccount *acc);
