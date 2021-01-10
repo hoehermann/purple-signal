@@ -110,7 +110,7 @@ TypedJNIEnv * PurpleSignalEnvironment::get(const std::string & signal_cli_path) 
             jvmo.optionString = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=10044"; options.push_back(jvmo); 
         }
         vm_args.options = options.data();
-        vm_args.nOptions = options.size();
+        vm_args.nOptions = jint(options.size());
         vm_args.version  = JNI_VERSION_1_8;
         jvm = new TypedJNIEnv(vm_args);
         // TODO: convert to std::string

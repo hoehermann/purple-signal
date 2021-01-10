@@ -3,7 +3,7 @@
 find_package(JNI REQUIRED)
 find_package(PkgConfig)
 if (PKG_CONFIG_FOUND)
-	pkg_check_modules(PURPLE REQUIRED purple)
+    pkg_check_modules(PURPLE REQUIRED purple)
 endif()
 
 message(STATUS
@@ -65,18 +65,19 @@ target_compile_definitions(${TARGET_NAME} PRIVATE MINGW_CROSSCOMPILING)
 endif()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	target_compile_options(${TARGET_NAME} PRIVATE 
-		-Werror 
-		-Wall 
-		#-Wextra 
-		#-Wconversion 
-		#-Wsign-conversion 
-		-Wsign-compare
-		# TODO: push these when including purple.h only
-		-DGLIB_DISABLE_DEPRECATION_WARNINGS
-		-Wno-write-strings
-		-Wno-parentheses
-	)
+    target_compile_options(${TARGET_NAME} PRIVATE 
+        -Werror 
+        -Wall 
+        #-Wextra 
+        -Wconversion 
+        #-Wsign-conversion 
+        -Wsign-compare
+        # TODO: push these when including purple.h only
+        -DGLIB_DISABLE_DEPRECATION_WARNINGS
+        -Wno-write-strings
+        -Wno-parentheses
+    )
+    set_source_files_properties(submodules/qrcode/cpp/QrCode.cpp PROPERTIES COMPILE_FLAGS -Wno-conversion)
 endif()
 
 target_include_directories(${TARGET_NAME} PRIVATE
@@ -110,15 +111,15 @@ if (EMBED_JAVA_BYTECODE)
 endif()
 
 if (PKG_CONFIG_FOUND)
-	exec_program("${PKG_CONFIG_EXECUTABLE} --variable=plugindir purple 2>/dev/null"
-		OUTPUT_VARIABLE LIB_INSTALL_DIR
-		RETURN_VALUE PURPLE_PLUGINDIR_RET
-		)
-	if (NOT PURPLE_PLUGINDIR_RET EQUAL 0)
-		message(WARNING "${PKG_CONFIG_EXECUTABLE} --variable=plugindir purple -- returned a non-null error code")
-	else()
-		install(TARGETS ${TARGET_NAME} DESTINATION ${LIB_INSTALL_DIR})
-	endif()
+    exec_program("${PKG_CONFIG_EXECUTABLE} --variable=plugindir purple 2>/dev/null"
+        OUTPUT_VARIABLE LIB_INSTALL_DIR
+        RETURN_VALUE PURPLE_PLUGINDIR_RET
+        )
+    if (NOT PURPLE_PLUGINDIR_RET EQUAL 0)
+        message(WARNING "${PKG_CONFIG_EXECUTABLE} --variable=plugindir purple -- returned a non-null error code")
+    else()
+        install(TARGETS ${TARGET_NAME} DESTINATION ${LIB_INSTALL_DIR})
+    endif()
 endif()
 
 file(STRINGS "../VERSION" SIGNAL_PLUGIN_VERSION)

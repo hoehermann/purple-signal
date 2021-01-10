@@ -20,7 +20,7 @@ PurpleConversation *signal_find_conversation(const char *username, PurpleAccount
 }
 
 void
-signal_display_message(PurpleConnection *pc, const std::string & chat, const std::string & sender, const std::string & message, const long timestamp, const PurpleMessageFlags flags)
+signal_display_message(PurpleConnection *pc, const std::string & chat, const std::string & sender, const std::string & message, const time_t timestamp, const PurpleMessageFlags flags)
 {
     PurpleSignalConnection *sa = static_cast<PurpleSignalConnection*>(purple_connection_get_protocol_data(pc));
     PurpleConversation *conv = signal_find_conversation(chat.c_str(), sa->account);
@@ -28,12 +28,11 @@ signal_display_message(PurpleConnection *pc, const std::string & chat, const std
 }
 
 void
-signal_process_message(PurpleConnection *pc, const std::string & chat, const std::string & sender, const std::string & message, const long timestamp, const PurpleMessageFlags flags)
+signal_process_message(PurpleConnection *pc, const std::string & chat, const std::string & sender, const std::string & message, time_t timestamp, const PurpleMessageFlags flags)
 {
     // TODO: have user-configurable option to ignore system messages
-    long t = timestamp / 1000; // in Java, signal timestamps are milliseconds
-    if (!t) {
-        t = time(NULL);
+    if (!timestamp) {
+        timestamp = time(NULL);
     }
-    signal_display_message(pc, chat, sender, message, t, flags);
+    signal_display_message(pc, chat, sender, message, timestamp, flags);
 }
