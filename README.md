@@ -23,7 +23,6 @@ Please note this is the third purple plugin I have ever written. I still have no
 
 This plug-in is a proof-of-concept with very little features:
 
-* Register a new account
 * Link to an existing account  
   Use the provided code text with signal-cli  
   or  
@@ -38,6 +37,7 @@ For more functionality, check out [purple-signald](https://github.com/hoehermann
 
 ### Missing Features
 
+* Register a new account with captcha
 * Retry failed messages
 * Attachments
 * Proper group chats
@@ -47,6 +47,10 @@ For more functionality, check out [purple-signald](https://github.com/hoehermann
 
 ### Known Problems
 
+* Works only once after linking or registering. **Renders plug-in almost completely unusable.**
+* GroupMessages do not work due to changes in signal-cli 0.7.x storage behaviour.
+* The MessageCache is not implemented and I have no idea what that may entrail.
 * First message from purple-signal to official signal is not sent properly.
-* Windows binary is almost completely unusable.
+* Windows binary is unusable.
+* If the plug-in crashes while handling a message, the message is lost.
 * It takes two minutes for the internal JVM to shut down. Or it crashes when terminating Pidgin. This issue disappears and reappears erratically.

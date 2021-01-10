@@ -310,10 +310,66 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			String message = dataMessage.getBody().get();
 			handleMessageNatively(this.purpleAccount, chat, source, message, timestamp, PURPLE_MESSAGE_RECV);
 		}
+		if (dataMessage.getAttachments().isPresent()) {
+			for (SignalServiceAttachment attachment : dataMessage.getAttachments().get()) {
+				SignalServiceAttachmentPointer attachmentPtr = attachment.asPointer();
+				if (attachmentPtr.getPreview().isPresent()) {
+					handlePreviewNatively(this.purpleAccount, chat, source, attachmentPtr.getPreview().get(), timestamp,
+							PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
+				}
+				if (attachmentPtr.getSize().isPresent()) {
+					final int fileSize = attachmentPtr.getSize().get();
+					final String fileName = attachmentPtr.getFileName().get();
+					handleAttachmentNatively(this.purpleAccount, chat, source, attachmentPtr, fileName, fileSize);
+				} else {
+					handleMessageNatively(this.purpleAccount, chat, source,
+							"[Received data message with attachment without size.]", timestamp,
+							PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
+				}
+			}
+		}
 		if (!dataMessage.getBody().isPresent() && !dataMessage.getAttachments().isPresent()) {
 			handleMessageNatively(this.purpleAccount, chat, source,
 					"[Received data message with neither body nor attachment.]", 0,
 					PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
+		}
+	}
+
+	public void receiveAttachment(Object attachment, String localFileName, long xfer)
+			throws IOException, InvalidMessageException, MissingConfigurationException {
+		System.err.println(String.format(
+				"Java: receiveAttachment(…, %s, 0x%012x)",
+				localFileName, xfer
+			));
+		if (attachment != null) {
+			SignalServiceAttachmentPointer attachmentPtr = (SignalServiceAttachmentPointer) attachment;
+			File tmpFile = new File(localFileName+".tmp"); // or File tmpFile = IOUtils.createTempFile();
+			final SignalServiceMessageReceiver messageReceiver = this.manager.getOrCreateMessageReceiver();
+			final InputStream attachmentStream = messageReceiver.retrieveAttachment(attachmentPtr, tmpFile, 150 * 1024 * 1024 ); // from ServiceConfig.MAX_ATTACHMENT_SIZE
+			tmpFile.delete(); // this should have effect on disk only after all handles have been closed
+			Thread backgroundReceiver = new Thread(() -> {
+				// stolen from signal-cli/src/main/java/org/asamk/signal/manager/util/AttachmentUtils.java
+	            byte[] buffer = new byte[4096];
+	            int read;
+	            try {
+		            boolean xferOk = true; // TODO check if purple xfer exists and is ready to write file
+					while (xferOk && (read = attachmentStream.read(buffer)) != -1) {
+						if (read > 0) {
+							System.err.println(String.format(
+								"Java: now calling handleAttachmentWriteNatively(0x%012x, 0x%012x, …, %d)",
+								this.purpleAccount, xfer, read
+							));
+							handleAttachmentWriteNatively(this.purpleAccount, xfer, buffer, read);
+						}
+					}
+				} catch (IOException e) {
+					// TODO have a handleAttachmentErrorNatively
+					e.printStackTrace();
+				}
+            });
+			backgroundReceiver.setName("backgroundReceiver for "+localFileName);
+			backgroundReceiver.setDaemon(true);
+			backgroundReceiver.run();
 		}
 	}
 
@@ -357,6 +413,14 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
 	public static native void handleMessageNatively(long connection, String chat, String sender, String content,
 			long timestamp, int flags);
+
+	public static native void handlePreviewNatively(long connection, String chat, String sender, byte[] preview,
+			long timestamp, int flags);
+
+	public static native void handleAttachmentNatively(long connection, String chat, String sender,
+			SignalServiceAttachmentPointer attachmentPtr, String fileName, int fileSize);
+	
+	public static native void handleAttachmentWriteNatively(long account, long xfer, byte[] b, int len);
 
 	public static native void handleErrorNatively(long connection, String error, boolean fatal);
 

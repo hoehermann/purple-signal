@@ -7,6 +7,7 @@ class PurpleSignal {
     TypedJNIEnv *jvm;
     TypedJNIObject instance; // reference to this connection's PurpleSignal (Java) instance.
     std::function<jint(jstring,jstring)> send_message; // reference to this connection's PurpleSignal (Java) instance's sendMessage method.
+    std::function<void(jobject,jstring,jlong)> receive_attachment; // reference to this connection's PurpleSignal (Java) instance's receiveAttachment method.
     
     public:
     PurpleSignal() = delete;
@@ -22,4 +23,7 @@ class PurpleSignal {
     
     // messaging
     int send_im(const std::string& who, const std::string& message);
+    
+    // attachment handling
+    void receiveAttachment(jobject attachmentPtr, const std::string & local_file_name, const uintptr_t xfer);
 };

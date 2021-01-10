@@ -36,10 +36,13 @@ set(SRC_LIST
     handler/async.hpp
     handler/message.cpp
     handler/message.hpp
+    handler/attachment.cpp
+    handler/attachment.hpp
     purplesignal/purplesignal.hpp
     purplesignal/account.cpp
     purplesignal/construction.cpp
     purplesignal/message.cpp
+    purplesignal/attachment.cpp
     purplesignal/utils.cpp
     purplesignal/utils.hpp
     purplesignal/error.cpp

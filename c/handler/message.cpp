@@ -30,6 +30,7 @@ signal_display_message(PurpleConnection *pc, const std::string & chat, const std
 void
 signal_process_message(PurpleConnection *pc, const std::string & chat, const std::string & sender, const std::string & message, const long timestamp, const PurpleMessageFlags flags)
 {
+    // TODO: have user-configurable option to ignore system messages
     long t = timestamp / 1000; // in Java, signal timestamps are milliseconds
     if (!t) {
         t = time(NULL);
