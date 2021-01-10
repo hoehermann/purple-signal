@@ -29,7 +29,7 @@ This plug-in is a proof-of-concept with very little features:
   Scan the provided QR code with with the official app
 * Simple Messaging
   * one-to-one conversation
-  * Group conversation
+  * receiving attachments
 
 Please note that, as of now, you have to add your contacts manually and they appear "offline" in the buddy list.
 
@@ -39,7 +39,8 @@ For more functionality, check out [purple-signald](https://github.com/hoehermann
 
 * Register a new account with captcha
 * Retry failed messages
-* Attachments
+* Sending attachments
+* **Group conversations**
 * Proper group chats
 * Contact list download
 * Group chat management (explicit join, leave, administration, …)
@@ -47,9 +48,9 @@ For more functionality, check out [purple-signald](https://github.com/hoehermann
 
 ### Known Problems
 
-* Works only once after linking or registering. **Renders plug-in almost completely unusable.**
-* GroupMessages do not work due to changes in signal-cli 0.7.x storage behaviour.
-* The MessageCache is not implemented and I have no idea what that may entrail.
+* May require new link or registration after a crash. Your number can be banned temporarily.
+* Group messages do not work due to changes in signal-cli 0.7.x storage behaviour.
+* The message cache is not implemented and I have no idea what that may entrail.
 * First message from purple-signal to official signal is not sent properly.
 * Windows binary is unusable.
 * If the plug-in crashes while handling a message, the message is lost.
