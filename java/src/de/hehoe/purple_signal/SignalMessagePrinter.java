@@ -1,6 +1,8 @@
 package de.hehoe.purple_signal;
 
 import java.util.List;
+
+import org.signal.zkgroup.groups.GroupMasterKey;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
@@ -9,6 +11,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup.Type;
 import org.whispersystems.signalservice.api.messages.calls.SignalServiceCallMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupContext;
+import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
@@ -214,10 +217,12 @@ public class SignalMessagePrinter {
 			System.out.println(prefix + "    Type: " + type.name());
 		}
 		if (groupContext.getGroupV2().isPresent()) {
-			// SignalServiceGroupV2 group = groupContext.getGroupV2().get();
-			System.out.println(prefix + "  GroupV2: TODO");
-			// group.getMasterKey();
-			// group.getRevision();
+			System.out.println(prefix + "  GroupV2");
+			SignalServiceGroupV2 group = groupContext.getGroupV2().get();
+			GroupMasterKey masterKey = group.getMasterKey();
+			System.out.println(prefix + "    MasterKey: " + masterKey.toString());
+			int revision = group.getRevision();
+			System.out.println(prefix + "    Revision: " + revision);
 			// group.getSignedGroupChange();
 		}
 	}
