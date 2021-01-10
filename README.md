@@ -53,7 +53,7 @@ For more functionality, check out [purple-signald](https://github.com/hoehermann
 * Contact list download
 * Sending attachments
 * Proper group chats
-* Group chat management (accepting invitations, explicit join by URI, leave, other administration, …)
+* Group chat management (explicit join, leave, administration, …)
 * everything else
 
 ### Known Problems

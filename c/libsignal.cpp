@@ -77,6 +77,7 @@ signal_login(PurpleAccount *account)
 static void
 signal_close(PurpleConnection *pc)
 {
+    // TODO: disconnect all handles (important for xfers of dying connections)
     PurpleSignalConnection *sa = (PurpleSignalConnection *)purple_connection_get_protocol_data(pc);
     if (sa) {
         delete sa;

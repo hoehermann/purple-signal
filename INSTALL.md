@@ -19,7 +19,9 @@ purple-signal now stores the account information in Pidgin's account data store 
   Put them into `c:\opt\pidgin\plugins`. Yes, in the Pidgin installation directory. For reasons beyond my understanding, the plug-in cannot not be loaded from user directory.  
   Launch Pidgin, create a new account. Enter your phone number (internationalized format +491234567890) for a username. Set the signal-cli path to `c:\opt\signal-cli\lib`.
 1. [zkgroup_x86.dll (32-bit)](https://github.com/dennisameling/zkgroup/releases/tag/v0.7.1-test)  
-  Rename to `zkgroup.dll` and place into `c:\opt\pidgin\plugins`.
+  Rename to `zkgroup.dll` and place into `c:\opt\pidgin\plugins`.  
+  Remove the file `libzkgroup.so` from signal-cli's `zkgroup-java-*.jar` using the zip program of your choice.  
+  More details [here](https://github.com/AsamK/signal-cli/wiki/Provide-native-lib-for-libsignal).
 
 *) It may or may not be necessary for that directory *not* to have spaces in the entire path. The default `C:\Program Files (x86)` may *not* work. I did not check thoroughly.
 
@@ -36,4 +38,6 @@ purple-signal now stores the account information in Pidgin's account data store 
   Copy or link libpurple-signal.so and purple_signal.jar into `~/.purple/plugins`.  
   Launch Pidgin, create a new account. Enter your phone number (internationalized format +491234567890) for a username. Set the signal-cli path to `/opt/signal-cli`.
 1. [zkgroup](https://github.com/signalapp/zkgroup/releases)  
-  Only needed for architectures other than x86_64. `zkgroup.so` for x86_64 is bundled with signal-cli.
+  Only needed for architectures other than x86_64. For x86_64, `libzkgroup.so` is bundled with signal-cli.  
+  Remove the file `libzkgroup.so` from signal-cli's `zkgroup-java-*.jar` using the zip program of your choice.  
+  More details [here](https://github.com/AsamK/signal-cli/wiki/Provide-native-lib-for-libsignal).

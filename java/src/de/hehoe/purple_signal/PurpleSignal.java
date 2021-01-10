@@ -2,6 +2,8 @@ package de.hehoe.purple_signal;
 
 import java.security.Security;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.signal.libsignal.metadata.ProtocolInvalidMessageException;
+import org.signal.libsignal.metadata.ProtocolNoSessionException;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,9 +21,9 @@ import org.asamk.signal.manager.UserAlreadyExists;
 import org.asamk.signal.manager.groups.GroupId;
 import org.asamk.signal.manager.groups.GroupIdFormatException;
 import org.asamk.signal.manager.groups.GroupNotFoundException;
+import org.asamk.signal.manager.groups.GroupUtils;
 import org.asamk.signal.manager.groups.NotAGroupMemberException;
 import org.asamk.signal.manager.storage.SignalAccount;
-import org.asamk.signal.manager.util.IOUtils;
 import org.asamk.signal.util.SecurityProvider;
 import org.asamk.signal.util.Util;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -36,15 +38,12 @@ import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
 import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
-import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
 import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
 import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
-import org.whispersystems.util.Base64;
 
 public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
@@ -55,13 +54,9 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	private String username = null;
 	private final SignalServiceConfiguration serviceConfiguration;
 	private final File dataPath = null;
-	// dataPath is not actually being used. All data is redirected to libpurple's
-	// internal storage
-	// (see adjustments made to org.asamk.signal.manager.storageSignalAccount in
-	// signal-cli submodule).
-	// dataPath remains in method calls so the signatures remain the same.
-	// TODO maybe use this to forward the account pointer to manager and storage?
-	// ugly but could work
+	// dataPath is not actually being used. All data is redirected to libpurple's internal storage
+	// (see adjustments made to org.asamk.signal.manager.storageSignalAccount in signal-cli submodule).
+	// dataPath remains in some method calls so the signatures remain the same.
 
 	private class BaseConfig {
 		private static final String USER_AGENT = "purple-signal";
@@ -116,17 +111,20 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			try {
 				linkedUsername = provisioningManager.finishDeviceLink("purple-signal");
 				if (!this.username.equals(linkedUsername)) {
-					handleErrorNatively(this.purpleAccount, String.format(
-							"Configured username %s does not match linked number %s.", this.username, linkedUsername));
+					handleErrorNatively(this.purpleAccount,
+						String.format("Configured username %s does not match linked number %s.",
+							this.username,
+							linkedUsername));
 				} else {
 					handleErrorNatively(this.purpleAccount, "Linking finished. Reconnect needed.");
 				}
 			} catch (UserAlreadyExists e) {
 				handleErrorNatively(this.purpleAccount,
-						"Unable to finish device link: User already exists locally. Delete Pidgin/libpurple account and try again.");
-			} catch (IOException | InvalidKeyException | TimeoutException e) {
-				handleErrorNatively(this.purpleAccount, "Unable to finish device link: " + e.getMessage());
-				e.printStackTrace();
+					"Unable to finish device link: User already exists locally. Delete Pidgin/libpurple account and try again.");
+			} catch (Throwable t) {
+				handleErrorNatively(this.purpleAccount,
+					"Unable to finish device link due to " + t.getClass().getName() + ": " + t.getMessage());
+				t.printStackTrace();
 			}
 
 		});
@@ -155,17 +153,25 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	public void run() {
 		logNatively(DEBUG_LEVEL_INFO, "Starting to listen for messages…");
 		boolean ignoreAttachments = true;
-		boolean returnOnTimeout = true; // it looks like setting this to false means "listen for new messages
-										// forever".
-		// There seems to be a non-daemon thread to be involved somewhere as the Java VM
-		// will not ever shut down.
-		long timeout = 60; // Seconds to wait for an incoming message. After the timeout occurred, a
-							// re-connect happens silently.
+		boolean returnOnTimeout = true; // it looks like setting this to false means "listen for new messages forever".
+		// There seems to be a non-daemon thread to be involved somewhere as the Java VM will not ever shut down.
+		long timeout = 60; // Seconds to wait for an incoming message. After the timeout occurred, a re-connect happens silently.
 		// TODO: Find out how this affects what.
 		try {
 			while (this.keepReceiving) {
-				this.manager.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout,
-						ignoreAttachments, this);
+				this.manager.receiveMessages((long) (timeout * 1000),
+					TimeUnit.MILLISECONDS,
+					returnOnTimeout,
+					ignoreAttachments,
+					this);
+			}
+		} catch (NoClassDefFoundError e) {
+			if (e.getMessage().contains("org.signal.zkgroup.internal.Native")) {
+				handleErrorNatively(this.purpleAccount,
+					"Unable to load zkgroup library required for group conversation.",
+					false);
+			} else {
+				handleErrorNatively(this.purpleAccount, e.getMessage(), false);
 			}
 		} catch (Exception e) {
 			handleErrorNatively(this.purpleAccount, "Exception while waiting for message: " + e.getMessage(), false);
@@ -174,12 +180,13 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			t.printStackTrace();
 		}
 		logNatively(DEBUG_LEVEL_INFO, "Receiving has finished.");
+		// TODO: signal "disconnected" to UI
 	}
 
 	private void startReceiving() {
 		if (receiverThread != null) {
 			handleErrorNatively(this.purpleAccount,
-					"Called startReceiving() on a connection already receiving. This is a bug.");
+				"Called startReceiving() on a connection already receiving. This is a bug.");
 		} else {
 			this.keepReceiving = true;
 			receiverThread = new Thread(this);
@@ -214,13 +221,22 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		// stolen from signald/src/main/java/io/finn/signald/MessageReceiver.java and
 		// signal-cli/src/main/java/org/asamk/signal/JsonMessageEnvelope.java and
 		// signal-cli/src/main/java/org/asamk/signal/ReceiveMessageHandler.java
+		Throwable cause = null;
 		if (exception != null) {
-			if (exception instanceof org.signal.libsignal.metadata.ProtocolNoSessionException) {
+			if (exception instanceof ProtocolNoSessionException) {
 				handleErrorNatively(this.purpleAccount,
-						"No Session. If problem persists, delete local account link or register again.");
+					"No Session. If problem persists, delete local account. Link or register again.");
+			} else if (exception instanceof ProtocolInvalidMessageException
+					&& (cause = ((ProtocolInvalidMessageException) exception)
+							.getCause()) instanceof InvalidMessageException
+					&& ((org.whispersystems.libsignal.InvalidMessageException) cause).getMessage()
+							.equals("No valid sessions.")) {
+				handleErrorNatively(this.purpleAccount,
+					"No valid sessions. Delete local account. Link or register again.");
 			} else {
 				handleErrorNatively(this.purpleAccount,
-						exception.getClass().getName() + " while handling message: " + exception.getMessage(), false);
+					exception.getClass().getName() + " while handling message: " + exception.getMessage(),
+					false);
 			}
 		}
 		if (envelope == null) {
@@ -253,8 +269,9 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 					handleDataMessage(content, source);
 					// TODO: do not send receipt until handleMessageNatively returns successfully
 					try {
-						this.manager.sendReceipt(content.getSender(), content.getDataMessage().get().getTimestamp(),
-								SignalServiceReceiptMessage.Type.READ);
+						this.manager.sendReceipt(content.getSender(),
+							content.getDataMessage().get().getTimestamp(),
+							SignalServiceReceiptMessage.Type.READ);
 					} catch (IOException | UntrustedIdentityException e) {
 						logNatively(DEBUG_LEVEL_INFO, "Receipt was not sent successfully: " + e);
 					}
@@ -265,11 +282,19 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 				} else if (content.getReceiptMessage().isPresent()) {
 					String description = "[Message "
 							+ content.getReceiptMessage().get().getType().toString().toLowerCase() + ".]";
-					handleMessageNatively(this.purpleAccount, source, source, description, timestamp,
-							PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
+					handleMessageNatively(this.purpleAccount,
+						source,
+						source,
+						description,
+						timestamp,
+						PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
 				} else {
-					handleMessageNatively(this.purpleAccount, source, source, "[Received message of unknown type.]",
-							timestamp, PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
+					handleMessageNatively(this.purpleAccount,
+						source,
+						source,
+						"[Received message of unknown type.]",
+						timestamp,
+						PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
 				}
 				// TODO: support all message types
 			}
@@ -279,34 +304,40 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	private void handleSyncMessage(SignalServiceContent content, String sender) {
 		SignalServiceSyncMessage syncMessage = content.getSyncMessage().get();
 		if (syncMessage.getSent().isPresent() && syncMessage.getSent().get().getMessage().getBody().isPresent()) {
+			// TODO: handle attachments
 			SentTranscriptMessage sentTranscriptMessage = syncMessage.getSent().get();
 			String chat = sender;
 			SignalServiceDataMessage dataMessage = sentTranscriptMessage.getMessage();
-			if (dataMessage.getGroupContext().isPresent()
-					&& dataMessage.getGroupContext().get().getGroupV1().isPresent()) {
-				SignalServiceGroup groupInfo = dataMessage.getGroupContext().get().getGroupV1().get();
-				chat = Base64.encodeBytes(groupInfo.getGroupId());
+			if (dataMessage.getGroupContext().isPresent()) {
+				chat = GroupUtils.getGroupId(dataMessage.getGroupContext().get()).toBase64();
 			} else {
 				chat = sentTranscriptMessage.getDestination().get().getNumber().get();
 			}
 			String message = dataMessage.getBody().get();
 			long timestamp = dataMessage.getTimestamp();
-			handleMessageNatively(this.purpleAccount, chat, this.username, message, timestamp,
-					PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_REMOTE_SEND | PURPLE_MESSAGE_DELAYED
+			handleMessageNatively(this.purpleAccount,
+				chat,
+				this.username,
+				message,
+				timestamp,
+				PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_REMOTE_SEND | PURPLE_MESSAGE_DELAYED
 			// flags copied from EionRobb/purple-discord/blob/master/libdiscord.c
 			);
 		} else {
-			handleMessageNatively(this.purpleAccount, sender, sender, "[Received sync message without body.]", 0,
-					PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
+			handleMessageNatively(this.purpleAccount,
+				sender,
+				sender,
+				"[Received sync message without body.]",
+				0,
+				PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
 		}
 	}
 
 	private void handleDataMessage(SignalServiceContent content, String source) {
 		SignalServiceDataMessage dataMessage = content.getDataMessage().get();
 		String chat = source;
-		if (dataMessage.getGroupContext().isPresent() && dataMessage.getGroupContext().get().getGroupV1().isPresent()) {
-			SignalServiceGroup groupInfo = dataMessage.getGroupContext().get().getGroupV1().get();
-			chat = Base64.encodeBytes(groupInfo.getGroupId());
+		if (dataMessage.getGroupContext().isPresent()) {
+			chat = GroupUtils.getGroupId(dataMessage.getGroupContext().get()).toBase64();
 		}
 		long timestamp = dataMessage.getTimestamp();
 		if (dataMessage.getBody().isPresent()) {
@@ -317,51 +348,65 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			for (SignalServiceAttachment attachment : dataMessage.getAttachments().get()) {
 				SignalServiceAttachmentPointer attachmentPtr = attachment.asPointer();
 				if (attachmentPtr.getPreview().isPresent()) {
-					handlePreviewNatively(this.purpleAccount, chat, source, attachmentPtr.getPreview().get(), timestamp,
-							PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
+					handlePreviewNatively(this.purpleAccount,
+						chat,
+						source,
+						attachmentPtr.getPreview().get(),
+						timestamp,
+						PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
 				}
 				if (attachmentPtr.getSize().isPresent()) {
 					final int fileSize = attachmentPtr.getSize().get();
 					final String fileName = attachmentPtr.getFileName().get();
 					handleAttachmentNatively(this.purpleAccount, chat, source, attachmentPtr, fileName, fileSize);
 				} else {
-					handleMessageNatively(this.purpleAccount, chat, source,
-							"[Received data message with attachment without size.]", timestamp,
-							PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
+					handleMessageNatively(this.purpleAccount,
+						chat,
+						source,
+						"[Received data message with attachment without size.]",
+						timestamp,
+						PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
 				}
 			}
 		}
 		if (!dataMessage.getBody().isPresent() && !dataMessage.getAttachments().isPresent()) {
-			handleMessageNatively(this.purpleAccount, chat, source,
-					"[Received data message with neither body nor attachment.]", 0,
-					PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
+			String message = "Received data message with neither body nor attachment.";
+			if (dataMessage.getGroupContext().isPresent()) {
+				message += " You may have been invited to or removed from this group, but this plug-in does not handle these events, yet.";
+			}
+			handleMessageNatively(this.purpleAccount,
+				chat,
+				source,
+				"[" + message + "]",
+				0,
+				PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
 		}
 	}
 
 	public void receiveAttachment(Object attachment, String localFileName, long xfer)
 			throws IOException, InvalidMessageException, MissingConfigurationException {
-		System.err.println(String.format(
-				"Java: receiveAttachment(…, %s, 0x%012x)",
-				localFileName, xfer
-			));
+		System.err.println(String.format("Java: receiveAttachment(…, %s, 0x%012x)", localFileName, xfer));
 		if (attachment != null) {
 			SignalServiceAttachmentPointer attachmentPtr = (SignalServiceAttachmentPointer) attachment;
-			File tmpFile = new File(localFileName+".tmp"); // or File tmpFile = IOUtils.createTempFile();
+			File tmpFile = new File(localFileName + ".tmp"); // or File tmpFile = IOUtils.createTempFile();
 			final SignalServiceMessageReceiver messageReceiver = this.manager.getOrCreateMessageReceiver();
-			final InputStream attachmentStream = messageReceiver.retrieveAttachment(attachmentPtr, tmpFile, 150 * 1024 * 1024 ); // from ServiceConfig.MAX_ATTACHMENT_SIZE
+			final InputStream attachmentStream = messageReceiver
+					.retrieveAttachment(attachmentPtr, tmpFile, 150 * 1024 * 1024); // from
+																					// ServiceConfig.MAX_ATTACHMENT_SIZE
 			tmpFile.delete(); // this should have effect on disk only after all handles have been closed
 			Thread backgroundReceiver = new Thread(() -> {
 				// stolen from signal-cli/src/main/java/org/asamk/signal/manager/util/AttachmentUtils.java
-	            byte[] buffer = new byte[4096];
-	            int read;
-	            try {
-		            boolean xferOk = true; // TODO check if purple xfer exists and is ready to write file
+				byte[] buffer = new byte[4096];
+				int read;
+				try {
+					boolean xferOk = true; // TODO check if purple xfer exists and is ready to write file
 					while (xferOk && (read = attachmentStream.read(buffer)) != -1) {
 						if (read > 0) {
 							System.err.println(String.format(
 								"Java: now calling handleAttachmentWriteNatively(0x%012x, 0x%012x, …, %d)",
-								this.purpleAccount, xfer, read
-							));
+								this.purpleAccount,
+								xfer,
+								read));
 							handleAttachmentWriteNatively(this.purpleAccount, xfer, buffer, read);
 						}
 					}
@@ -369,20 +414,20 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 					// TODO have a handleAttachmentErrorNatively
 					e.printStackTrace();
 				}
-            });
-			backgroundReceiver.setName("backgroundReceiver for "+localFileName);
+			});
+			backgroundReceiver.setName("backgroundReceiver for " + localFileName);
 			backgroundReceiver.setDaemon(true);
 			backgroundReceiver.run();
 		}
 	}
 
-	int sendMessage(String who, String message) {
+	public int sendMessage(String who, String message) {
 		if (this.manager != null) {
 			try {
 				if (who.startsWith("+")) {
 					this.manager.sendMessage(message, null, Arrays.asList(who)); // https://stackoverflow.com/questions/20358883/
 				} else {
-					GroupId groupId = Util.decodeGroupId(who);
+					GroupId groupId = Util.decodeGroupId(who); // for reasons beyond my understanding, this seems to work for V1 and V2 groups, too
 					this.manager.sendGroupMessage(message, null, groupId);
 				}
 				return 1;
@@ -396,8 +441,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	}
 
 	static {
-		System.loadLibrary("purple-signal"); // will implicitly look for libpurple-signal.so on Linux and
-												// purple-signal.dll on Windows
+		System.loadLibrary("purple-signal"); // will implicitly look for libpurple-signal.so on Linux and purple-signal.dll on Windows
 	}
 
 	final int PURPLE_MESSAGE_SEND = 0x0001;
@@ -422,7 +466,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
 	public static native void handleAttachmentNatively(long connection, String chat, String sender,
 			SignalServiceAttachmentPointer attachmentPtr, String fileName, int fileSize);
-	
+
 	public static native void handleAttachmentWriteNatively(long account, long xfer, byte[] b, int len);
 
 	public static native void handleErrorNatively(long connection, String error, boolean fatal);
