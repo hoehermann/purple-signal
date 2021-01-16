@@ -19,7 +19,7 @@ class PurpleSignal {
     // account management
     void link_account();
     void register_account(bool voice, const std::string & captcha);
-    void verify_account(const std::string & code, const std::string & pin);
+    void verify_account(const std::string & code, const std::string & captcha);
     
     // messaging
     int send_im(const std::string& who, const std::string& message);

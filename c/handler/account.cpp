@@ -90,42 +90,73 @@ signal_ask_verification_code(PurpleConnection *pc) {
     );
 }
 
+void
+signal_ask_captcha_cb(PurpleSignalConnection *sa, const char *captcha){
+    sa->ps.register_account(false, captcha); // TODO: give option for voice registration
+}
+
+void
+signal_ask_pin_cancel_cb(PurpleSignalConnection *sa, int choice) {
+    purple_connection_error(sa->connection, PURPLE_CONNECTION_ERROR_INVALID_USERNAME, "Cannot continue without account.");
+}
+
+void
+signal_ask_pin(PurpleSignalConnection *sa) {
+    purple_request_input(
+        sa->connection, 
+        "Captcha code needed", // title
+        "Please enter a valid captcha code", // primary line
+        "https://gitlab.com/signald/signald/-/wikis/Captchas", // secondary line
+        nullptr, // default value
+        false, // multiline
+        true, //masked 
+        nullptr, //hint
+        "OK", G_CALLBACK(signal_ask_captcha_cb),
+        "Cancel", G_CALLBACK(signal_ask_pin_cancel_cb),
+        sa->account, 
+        nullptr, //who
+        nullptr, //conv
+        sa
+    );
+}
+
 const int SIGNAL_ACCOUNT_LINK = 0;
 const int SIGNAL_ACCOUNT_REGISTER = 1;
 const int SIGNAL_ACCOUNT_VERIFY = 2;
 
 void
-signal_ask_register_or_link_ok_cb(PurpleConnection *pc, int choice) {
-    PurpleSignalConnection *sa = static_cast<PurpleSignalConnection *>(purple_connection_get_protocol_data(pc));
+signal_ask_register_or_link_ok_cb(PurpleSignalConnection *sa, int choice) {
     try {
         switch (choice) {
             case SIGNAL_ACCOUNT_LINK: sa->ps.link_account(); break;
-            case SIGNAL_ACCOUNT_REGISTER: sa->ps.register_account(false, ""); break;
-            case SIGNAL_ACCOUNT_VERIFY: signal_ask_verification_code(pc); break;
+            case SIGNAL_ACCOUNT_REGISTER: 
+                sa->ps.register_account(false, nullptr); // TODO: give option for voice registration
+                //signal_ask_captcha(sa); // TODO: ask for captcha iff needed
+                break;
+            case SIGNAL_ACCOUNT_VERIFY: signal_ask_verification_code(sa->connection); break;
             default: purple_debug(PURPLE_DEBUG_ERROR, "signal", "%s\n", "User dialogue returned with invalid choice.");
         }
     } catch (std::exception & e) {
-        purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,e.what());
+        purple_connection_error(sa->connection, PURPLE_CONNECTION_ERROR_OTHER_ERROR, e.what());
     }   
 }
 
 void
-signal_ask_register_or_link_cancel_cb(PurpleConnection *pc, int choice) {
-    purple_connection_error(pc, PURPLE_CONNECTION_ERROR_INVALID_USERNAME, "Cannot continue without account.");
+signal_ask_register_or_link_cancel_cb(PurpleSignalConnection *sa, int choice) {
+    purple_connection_error(sa->connection, PURPLE_CONNECTION_ERROR_INVALID_USERNAME, "Cannot continue without account.");
 }
 
 void
 signal_ask_register_or_link(PurpleConnection *pc) {
     PurpleSignalConnection *sa = static_cast<PurpleSignalConnection *>(purple_connection_get_protocol_data(pc));
-    // TODO: offer input for captcha
     purple_request_choice(
-        pc, 
-        "Unknown account", "Please choose",
+        sa->connection, 
+        "Insufficient session data", "Please choose",
         NULL, 0,
         "OK", G_CALLBACK(signal_ask_register_or_link_ok_cb),
         "Cancel", G_CALLBACK(signal_ask_register_or_link_cancel_cb),
         sa->account, NULL, NULL, 
-        pc, 
+        sa, 
         "Link to existing account", SIGNAL_ACCOUNT_LINK, 
         "Register new", SIGNAL_ACCOUNT_REGISTER, 
         NULL

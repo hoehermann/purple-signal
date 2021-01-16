@@ -15,9 +15,9 @@ void PurpleSignal::link_account() {
     tjni_exception_check(jvm);
 }
 
-void PurpleSignal::verify_account(const std::string & code, const std::string & pin) {
+void PurpleSignal::verify_account(const std::string & code, const std::string & captcha) {
     instance.GetMethod<void(jstring, jstring)>("verifyAccount")(
-        jvm->make_jstring(code), jvm->make_jstring(pin)
+        jvm->make_jstring(code), jvm->make_jstring(captcha)
     );
     tjni_exception_check(jvm);
 }

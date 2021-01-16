@@ -143,9 +143,12 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		askVerificationCodeNatively(this.purpleAccount);
 	}
 
-	public void verifyAccount(String verificationCode, String pin)
+	public void verifyAccount(String verificationCode, String captcha)
 			throws IOException, KeyBackupServicePinException, KeyBackupSystemNoDataException {
-		this.manager.verifyAccount(verificationCode, pin);
+		if (captcha.isEmpty()) {
+			captcha = null;
+		}
+		this.manager.verifyAccount(verificationCode, captcha);
 		handleErrorNatively(this.purpleAccount, "Verification finished. Reconnect needed.");
 	}
 
