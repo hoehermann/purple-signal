@@ -22,14 +22,13 @@
 #error Purple3 not supported.
 #endif
 
-#ifndef SIGNAL_PLUGIN_VERSION
-#error Must set SIGNAL_PLUGIN_VERSION in Makefile
-#endif
-#define SIGNAL_PLUGIN_WEBSITE "https://github.com/hoehermann/purple-signal"
-
-#define SIGNAL_OPTION_LIBDIR "signal-cli-lib-dir"
-#define SIGNAL_DEFAULT_LIBDIR ""
-
+const char * const SIGNAL_PLUGIN_ID  = "prpl-hehoe-signal";
+const char * const SIGNAL_PLUGIN_WEBSITE = "https://github.com/hoehermann/purple-signal";
+const char * const SIGNAL_OPTION_LIBDIR = "signal-cli-lib-dir";
+const char * const SIGNAL_DEFAULT_LIBDIR = "";
+const char * const SIGNAL_OPTION_SHOW_SYSTEM = "show-system-messages";
+const bool SIGNAL_DEFAULT_SHOW_SYSTEM = true;
+                
 extern "C" {
 
 static const char *
@@ -134,6 +133,13 @@ signal_add_account_options(GList *account_options)
                 );
     account_options = g_list_append(account_options, option);
     
+    option = purple_account_option_bool_new(
+                "Show system messages in conversation for debug purposes.",
+                SIGNAL_OPTION_SHOW_SYSTEM,
+                SIGNAL_DEFAULT_SHOW_SYSTEM
+                );
+    account_options = g_list_append(account_options, option);
+    
     return account_options;
 }
 
@@ -204,13 +210,13 @@ static PurplePluginInfo info = {
     0,                                /* flags */
     NULL,                            /* dependencies */
     PURPLE_PRIORITY_DEFAULT,        /* priority */
-    SIGNAL_PLUGIN_ID,                /* id */
+    const_cast<char *>(SIGNAL_PLUGIN_ID),                /* id */
     (char*)"signal",                        /* name */
     SIGNAL_PLUGIN_VERSION,            /* version */
     (char*)"",                                /* summary */
     (char*)"",                                /* description */
     (char*)"Hermann Hoehne <hoehermann@gmx.de>", /* author */
-    SIGNAL_PLUGIN_WEBSITE,            /* homepage */
+    const_cast<char *>(SIGNAL_PLUGIN_WEBSITE),            /* homepage */
     libpurple2_plugin_load,            /* load */
     libpurple2_plugin_unload,        /* unload */
     NULL,                            /* destroy */
