@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -243,6 +244,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			handleErrorNatively(this.purpleAccount, "Handling null envelope."); // this should never happen
 		} else {
 			SignalMessagePrinter.printEnvelope(envelope);
+			long timestamp = envelope.getTimestamp();
 			String source = null;
 			if (envelope.isUnidentifiedSender()) {
 				logNatively(DEBUG_LEVEL_INFO, "Envelope shows unidentified sender.");
@@ -260,10 +262,13 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			} else if (envelope.isReceipt()) {
 				logNatively(DEBUG_LEVEL_INFO, "Ignoring receipt.");
 			} else if (content == null) {
-				logNatively(DEBUG_LEVEL_INFO, "Failed to decrypt incoming message. Ignoring message.");
-				// handleErrorNatively(this.connection, "Failed to decrypt incoming message.");
+				handleMessageNatively(this.purpleAccount,
+					source,
+					source,
+					"Failed to decrypt incoming message.",
+					timestamp,
+					PURPLE_MESSAGE_ERROR);
 			} else {
-				long timestamp = envelope.getTimestamp();
 				SignalMessagePrinter.printSignalServiceContent(content);
 				if (content.getDataMessage().isPresent()) {
 					handleDataMessage(content, source);
@@ -427,7 +432,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 				if (who.startsWith("+")) {
 					this.manager.sendMessage(message, null, Arrays.asList(who)); // https://stackoverflow.com/questions/20358883/
 				} else {
-					GroupId groupId = Util.decodeGroupId(who); // for reasons beyond my understanding, this seems to work for V1 and V2 groups, too
+					GroupId groupId = Util.decodeGroupId(who);
 					this.manager.sendGroupMessage(message, null, groupId);
 				}
 				return 1;
@@ -449,6 +454,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	final int PURPLE_MESSAGE_SYSTEM = 0x0004;
 	final int PURPLE_MESSAGE_NICK = 0x0020;
 	final int PURPLE_MESSAGE_NO_LOG = 0x0040;
+	final int PURPLE_MESSAGE_ERROR = 0x0200;
 	final int PURPLE_MESSAGE_DELAYED = 0x0400;
 	final int PURPLE_MESSAGE_REMOTE_SEND = 0x10000;
 
