@@ -2,7 +2,7 @@ package de.hehoe.purple_signal;
 
 import java.util.List;
 
-import org.signal.zkgroup.groups.GroupMasterKey;
+import org.asamk.signal.manager.groups.GroupUtils;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
@@ -219,8 +219,7 @@ public class SignalMessagePrinter {
 		if (groupContext.getGroupV2().isPresent()) {
 			System.out.println(prefix + "  GroupV2");
 			SignalServiceGroupV2 group = groupContext.getGroupV2().get();
-			GroupMasterKey masterKey = group.getMasterKey();
-			System.out.println(prefix + "    MasterKey: " + masterKey.toString());
+			System.out.println(prefix + "    MasterKey: " + GroupUtils.getGroupId(groupContext).toBase64());
 			int revision = group.getRevision();
 			System.out.println(prefix + "    Revision: " + revision);
 			// group.getSignedGroupChange();

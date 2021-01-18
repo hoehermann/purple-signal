@@ -4,12 +4,12 @@ import java.security.Security;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.signal.libsignal.metadata.ProtocolInvalidMessageException;
 import org.signal.libsignal.metadata.ProtocolNoSessionException;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -29,10 +29,12 @@ import org.asamk.signal.util.SecurityProvider;
 import org.asamk.signal.util.Util;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidMessageException;
+import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.KeyBackupServicePinException;
 import org.whispersystems.signalservice.api.KeyBackupSystemNoDataException;
 import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
+import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
@@ -49,7 +51,7 @@ import org.whispersystems.signalservice.internal.configuration.SignalServiceConf
 public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
 	private Manager manager = null;
-	private long purpleAccount = 0;
+	private long purpleAccount = 0; // TODO: remove this hack. for thread-safety, the callbacks do a lookup anyway.
 	private boolean keepReceiving = false;
 	private Thread receiverThread = null;
 	private String username = null;
@@ -95,7 +97,14 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 				// other exceptions may bubble to C++
 			}
 
+			final String profileName = getSettingsStringNatively(this.purpleAccount, "profile-name", "");
+			if (!profileName.isEmpty()) {
+				this.manager.setProfile(profileName, null);
+				// exception may bubble to C++
+			}
+			
 			logNatively(DEBUG_LEVEL_INFO, "User " + manager.getUsername() + " is authorized.");
+			// TODO: use signal-cli's new getUserStatus to get actual status
 			startReceiving();
 
 			// TODO: signal account "connected"
@@ -375,14 +384,34 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			}
 		}
 		if (!dataMessage.getBody().isPresent() && !dataMessage.getAttachments().isPresent()) {
-			String message = "Received data message with neither body nor attachment.";
-			if (dataMessage.getGroupContext().isPresent()) {
-				message += " You may have been invited to or removed from this group, but this plug-in does not handle these events, yet.";
+			handleBodilessMessage(chat, source, dataMessage);
+		}
+	}
+
+	private void handleBodilessMessage(String chat, String source, SignalServiceDataMessage dataMessage) {
+		if (dataMessage.getGroupContext().isPresent()) {
+			GroupId groupId = GroupUtils.getGroupId(dataMessage.getGroupContext().get());
+			try {
+				// TODO: ask user before joining group
+				this.manager.updateGroup(groupId, null, null, null);
+				handleMessageNatively(this.purpleAccount,
+					chat,
+					source,
+					"[I updated (probably joined) this group.]",
+					0,
+					PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
+			} catch (IOException | GroupNotFoundException | AttachmentInvalidException | NotAGroupMemberException
+					| InvalidNumberException e) {
+				handleErrorNatively(this.purpleAccount,
+					e.getClass().getName() + " while updating group: " + e.getMessage(),
+					false);
+				e.printStackTrace();
 			}
+		} else {
 			handleMessageNatively(this.purpleAccount,
 				chat,
 				source,
-				"[" + message + "]",
+				"[Received data message with neither body nor attachment.]",
 				0,
 				PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
 		}

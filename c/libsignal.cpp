@@ -133,6 +133,13 @@ signal_add_account_options(GList *account_options)
                 );
     account_options = g_list_append(account_options, option);
     
+    option = purple_account_option_string_new(
+                "Name to show in profile (optional for linked accounts)",
+                "profile-name",
+                ""
+                );
+    account_options = g_list_append(account_options, option);
+    
     option = purple_account_option_bool_new(
                 "Show system messages in conversation for debug purposes.",
                 SIGNAL_OPTION_SHOW_SYSTEM,
