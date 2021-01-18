@@ -4,6 +4,7 @@
  */
 
 #include "../connection.hpp"
+#include "../libsignal.hpp"
 #include "../purple_compat.h"
 
 PurpleConversation *signal_find_conversation(const char *username, PurpleAccount *account) {
@@ -30,7 +31,13 @@ signal_display_message(PurpleConnection *pc, const std::string & chat, const std
 void
 signal_process_message(PurpleConnection *pc, const std::string & chat, const std::string & sender, const std::string & message, time_t timestamp, const PurpleMessageFlags flags)
 {
-    // TODO: have user-configurable option to ignore system messages
+    if (
+        flags & PURPLE_MESSAGE_SYSTEM && 
+        !purple_account_get_bool(purple_connection_get_account(pc), SIGNAL_OPTION_SHOW_SYSTEM, SIGNAL_DEFAULT_SHOW_SYSTEM)
+    ) {
+        purple_debug_info(SIGNAL_PLUGIN_ID, "Not showing system message: %s", message.c_str());
+        return;
+    }
     if (!timestamp) {
         timestamp = time(NULL);
     }
