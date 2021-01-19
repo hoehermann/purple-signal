@@ -4,7 +4,6 @@
 #include "../purplesignal/purplesignal.hpp"
 #include "../purple_compat.h"
 
-bool signal_purple_xfer_exists(PurpleXfer * xfer);
 void signal_process_attachment(
     PurpleConnection *pc, 
     const std::string & chat, 

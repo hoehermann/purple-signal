@@ -135,36 +135,6 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleAttachmen
     signal_handle_message_async(psm);
 }
 
-
-JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleAttachmentWriteNatively(JNIEnv * env, jclass, jlong jaccount, jlong xfer, jbyteArray jbuffer, jint size) {
-    std::cerr << "handleAttachmentWriteNatively" << std::endl;
-    uintptr_t account = uintptr_t(jaccount);
-    // https://stackoverflow.com/questions/8439233/how-to-convert-jbytearray-to-native-char-in-jni
-    jbyte* b = env->GetByteArrayElements(jbuffer, NULL);
-    std::vector<guchar> buffer(b, b+size);
-    env->ReleaseByteArrayElements(jbuffer, b, JNI_ABORT);
-    auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
-        [
-            xfer = reinterpret_cast<PurpleXfer *>(xfer),
-            buffer
-        ] () {
-            if (signal_purple_xfer_exists(xfer)) {
-                std::cerr << "xfer exists, writing " << buffer.size() << " bytes…" << std::endl;
-                purple_xfer_write_file(xfer, buffer.data(), buffer.size());
-                if (purple_xfer_get_bytes_remaining(xfer) > 0) {
-                    purple_xfer_update_progress(xfer);
-                } else {
-                    purple_xfer_set_completed(xfer, true);
-                    purple_xfer_end(xfer);
-                }
-                std::cerr << "File is now at " << purple_xfer_get_progress(xfer) << " %, completed is " << purple_xfer_is_completed(xfer) << std::endl;
-            }
-        }
-    );
-    PurpleSignalMessage *psm = new PurpleSignalMessage(do_in_main_thread, account);
-    signal_handle_message_async(psm);
-}
-
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handlePreviewNatively(JNIEnv *, jclass, jlong, jstring, jstring, jbyteArray, jlong, jint) {
     std::cerr << "handlePreviewNatively" << std::endl;
     // TODO

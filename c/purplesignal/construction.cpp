@@ -12,7 +12,7 @@ PurpleSignal::PurpleSignal(TypedJNIEnv *jvm, uintptr_t account, const std::strin
     )) {
     tjni_exception_check(jvm); // check for exceptions lingering in Java VM from calling GetConstructor
     send_message = instance.GetMethod<jint(jstring,jstring)>("sendMessage");
-    receive_attachment = instance.GetMethod<void(jobject,jstring,jlong)>("receiveAttachment");
+    accept_attachment = instance.GetMethod<jobject(jobject,jstring)>("acceptAttachment");
 }
 
 int PurpleSignal::close() {

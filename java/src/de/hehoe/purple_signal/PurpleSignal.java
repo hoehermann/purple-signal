@@ -388,41 +388,18 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		}
 	}
 
-	public void receiveAttachment(Object attachment, String localFileName, long xfer)
+	public Object acceptAttachment(Object attachment, String localFileName)
 			throws IOException, InvalidMessageException, MissingConfigurationException {
-		System.err.println(String.format("Java: receiveAttachment(…, %s, 0x%012x)", localFileName, xfer));
 		if (attachment != null) {
 			SignalServiceAttachmentPointer attachmentPtr = (SignalServiceAttachmentPointer) attachment;
 			File tmpFile = new File(localFileName + ".tmp"); // or File tmpFile = IOUtils.createTempFile();
 			final SignalServiceMessageReceiver messageReceiver = this.manager.getOrCreateMessageReceiver();
 			final InputStream attachmentStream = messageReceiver
-					.retrieveAttachment(attachmentPtr, tmpFile, 150 * 1024 * 1024); // from
-																					// ServiceConfig.MAX_ATTACHMENT_SIZE
+					.retrieveAttachment(attachmentPtr, tmpFile, 150 * 1024 * 1024); // from ServiceConfig.MAX_ATTACHMENT_SIZE
 			tmpFile.delete(); // this should have effect on disk only after all handles have been closed
-			Thread backgroundReceiver = new Thread(() -> {
-				// stolen from signal-cli/src/main/java/org/asamk/signal/manager/util/AttachmentUtils.java
-				byte[] buffer = new byte[4096];
-				int read;
-				try {
-					boolean xferOk = true; // TODO check if purple xfer exists and is ready to write file
-					while (xferOk && (read = attachmentStream.read(buffer)) != -1) {
-						if (read > 0) {
-							System.err.println(String.format(
-								"Java: now calling handleAttachmentWriteNatively(0x%012x, 0x%012x, …, %d)",
-								this.purpleAccount,
-								xfer,
-								read));
-							handleAttachmentWriteNatively(this.purpleAccount, xfer, buffer, read);
-						}
-					}
-				} catch (IOException e) {
-					// TODO have a handleAttachmentErrorNatively
-					e.printStackTrace();
-				}
-			});
-			backgroundReceiver.setName("backgroundReceiver for " + localFileName);
-			backgroundReceiver.setDaemon(true);
-			backgroundReceiver.run();
+			return attachmentStream;
+		} else {
+			return null;
 		}
 	}
 
@@ -472,8 +449,6 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
 	public static native void handleAttachmentNatively(long connection, String chat, String sender,
 			SignalServiceAttachmentPointer attachmentPtr, String fileName, int fileSize);
-
-	public static native void handleAttachmentWriteNatively(long account, long xfer, byte[] b, int len);
 
 	public static native void handleErrorNatively(long connection, String error, boolean fatal);
 
