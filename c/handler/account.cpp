@@ -149,9 +149,11 @@ signal_ask_register_or_link_cancel_cb(PurpleSignalConnection *sa, int choice) {
 void
 signal_ask_register_or_link(PurpleConnection *pc) {
     PurpleSignalConnection *sa = static_cast<PurpleSignalConnection *>(purple_connection_get_protocol_data(pc));
+    char * primary = g_strdup_printf("What to do with account %s?", purple_account_get_username(sa->account));
     purple_request_choice(
         sa->connection, 
-        "Insufficient session data", "Please choose",
+        "Insufficient session data", 
+        "",
         NULL, 0,
         "OK", G_CALLBACK(signal_ask_register_or_link_ok_cb),
         "Cancel", G_CALLBACK(signal_ask_register_or_link_cancel_cb),
@@ -161,4 +163,5 @@ signal_ask_register_or_link(PurpleConnection *pc) {
         "Register new", SIGNAL_ACCOUNT_REGISTER, 
         NULL
     );
+    g_free(primary);
 }
