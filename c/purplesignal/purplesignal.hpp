@@ -3,9 +3,8 @@
 #include "../submodules/typedjni/typedjni.hpp"
 
 class PurpleSignal {
-    public:
-    TypedJNIEnv *jvm;
     private:
+    TypedJNIEnv *jvm;
     TypedJNIObject instance; // reference to this connection's PurpleSignal (Java) instance.
     std::function<jint(jstring,jstring)> send_message; // reference to this connection's PurpleSignal (Java) instance's sendMessage method.
     std::function<jobject(jobject,jstring)> accept_attachment; // reference to this connection's PurpleSignal (Java) instance's acceptAttachment method.
@@ -26,5 +25,5 @@ class PurpleSignal {
     int send_im(const std::string& who, const std::string& message);
     
     // attachment handling
-    TypedJNIObject acceptAttachment(jobject attachmentPtr, const std::string & local_file_name);
+    std::function<int(unsigned char **buffer)> acceptAttachment(jobject attachment, const std::string & local_file_name);
 };
