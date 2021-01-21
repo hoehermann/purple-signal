@@ -23,16 +23,20 @@ void tjni_exception_check(TypedJNIEnv *tenv) {
         jthrowable jexception = tenv->env->ExceptionOccurred();
         if (true) { // TODO: "if purple -d active"
             TypedJNIMethod<void()>::get(
-                tenv->env, 
-                tenv->find_class("java/lang/Throwable").cls, 
-                jexception, 
+                TypedJNIObject(
+                    tenv->env,
+                    tenv->find_class("java/lang/Throwable").cls,
+                    jexception
+                ),
                 "printStackTrace"
             )();
         }
         jstring jstr = TypedJNIMethod<jstring()>::get(
-            tenv->env, 
-            tenv->find_class("java/lang/Object").cls, 
-            jexception, 
+            TypedJNIObject(
+                tenv->env, 
+                tenv->find_class("java/lang/Object").cls, 
+                jexception
+            ), 
             "toString"
         )();
         throw std::runtime_error(tjni_jstring_to_stdstring(tenv->env, jstr));
