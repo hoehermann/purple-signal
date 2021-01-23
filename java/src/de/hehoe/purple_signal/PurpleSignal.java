@@ -16,7 +16,9 @@ import java.util.concurrent.TimeoutException;
 import org.asamk.signal.manager.AttachmentInvalidException;
 import org.asamk.signal.manager.Manager;
 import org.asamk.signal.manager.Manager.ReceiveMessageHandler;
+import org.asamk.signal.manager.NotRegisteredException;
 import org.asamk.signal.manager.ProvisioningManager;
+import org.asamk.signal.manager.RegistrationManager;
 import org.asamk.signal.manager.ServiceConfig;
 import org.asamk.signal.manager.UserAlreadyExists;
 import org.asamk.signal.manager.groups.GroupId;
@@ -60,13 +62,14 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	// dataPath is not actually being used. All data is redirected to libpurple's internal storage
 	// (see adjustments made to org.asamk.signal.manager.storageSignalAccount in signal-cli submodule).
 	// dataPath remains in some method calls so the signatures remain the same.
+	private RegistrationManager registrationManager;
 
 	private class BaseConfig {
 		private static final String USER_AGENT = "purple-signal";
 	}
 
 	public PurpleSignal(long purpleAccount, String username)
-			throws IOException, TimeoutException, InvalidKeyException, UserAlreadyExists {
+			throws IOException, TimeoutException, InvalidKeyException, UserAlreadyExists, NotRegisteredException {
 		serviceConfiguration = ServiceConfig.createDefaultServiceConfiguration(BaseConfig.USER_AGENT);
 
 		this.purpleAccount = purpleAccount;
@@ -144,10 +147,10 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	}
 
 	public void registerAccount(boolean voiceVerification, String captcha) throws IOException {
-		if (this.manager == null) {
-			this.manager = Manager.init(username, dataPath, serviceConfiguration, BaseConfig.USER_AGENT);
+		if (this.registrationManager == null) {
+			this.registrationManager = RegistrationManager.init(username, dataPath, serviceConfiguration, BaseConfig.USER_AGENT);
 		}
-		this.manager.register(voiceVerification, captcha);
+		this.registrationManager.register(voiceVerification, captcha);
 		askVerificationCodeNatively(this.purpleAccount);
 	}
 
@@ -156,7 +159,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		if (captcha.isEmpty()) {
 			captcha = null;
 		}
-		this.manager.verifyAccount(verificationCode, captcha);
+		this.registrationManager.verifyAccount(verificationCode, captcha);
 		handleErrorNatively(this.purpleAccount, "Verification finished. Reconnect needed.");
 	}
 
@@ -422,7 +425,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		if (attachment != null) {
 			SignalServiceAttachmentPointer attachmentPtr = (SignalServiceAttachmentPointer) attachment;
 			File tmpFile = new File(localFileName + ".tmp"); // or File tmpFile = IOUtils.createTempFile();
-			final SignalServiceMessageReceiver messageReceiver = this.manager.getOrCreateMessageReceiver();
+			final SignalServiceMessageReceiver messageReceiver = this.manager.messageReceiver;
 			final InputStream attachmentStream = messageReceiver
 					.retrieveAttachment(attachmentPtr, tmpFile, 150 * 1024 * 1024); // from ServiceConfig.MAX_ATTACHMENT_SIZE
 			tmpFile.delete(); // this should have effect on disk only after all handles have been closed

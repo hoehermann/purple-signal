@@ -13,7 +13,7 @@ cmake \
 -DPKG_CONFIG_EXECUTABLE="/usr/bin/pkg-config\;--define-prefix" \
 -DJAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64 \
 -DJAVA_HOME_WIN32=${PIDGIN_DEV_PATH}/jdk-11 \
--DSIGNAL_CLI_LIB_DIR=${PIDGIN_DEV_PATH}/signal-cli/0.7.2/lib \
+-DSIGNAL_CLI_LIB_DIR=${PIDGIN_DEV_PATH}/signal-cli/0.7.4/lib \
 -DDIRENT_INCLUDE_DIRS=${PIDGIN_DEV_PATH}/dirent \
 -DCMAKE_BUILD_TYPE=Debug \
 -DMINGW_CROSSCOMPILING=yes \
