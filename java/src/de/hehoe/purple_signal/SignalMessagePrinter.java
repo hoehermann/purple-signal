@@ -89,31 +89,24 @@ public class SignalMessagePrinter {
 			if (syncMessage.getBlockedList().isPresent()) {
 				System.out.println(printPrefix + "    BlockedList: TODO");
 			}
-			;
 			if (syncMessage.getConfiguration().isPresent()) {
 				System.out.println(printPrefix + "    Configuration: TODO");
 			}
-			;
 			if (syncMessage.getContacts().isPresent()) {
 				System.out.println(printPrefix + "    Contacts: TODO");
 			}
-			;
 			if (syncMessage.getFetchType().isPresent()) {
 				System.out.println(printPrefix + "    FetchType: TODO");
 			}
-			;
 			if (syncMessage.getGroups().isPresent()) {
 				System.out.println(printPrefix + "    Groups: TODO");
 			}
-			;
 			if (syncMessage.getKeys().isPresent()) {
 				System.out.println(printPrefix + "    Keys: TODO");
 			}
-			;
 			if (syncMessage.getMessageRequestResponse().isPresent()) {
 				System.out.println(printPrefix + "    MessageRequestResponse: TODO");
 			}
-			;
 			if (syncMessage.getRead().isPresent()) {
 				System.out.println(printPrefix + "    Read:");
 				List<ReadMessage> read = syncMessage.getRead().get();
@@ -121,11 +114,9 @@ public class SignalMessagePrinter {
 					System.out.println(printPrefix + "      " + readMessage.toString());
 				});
 			}
-			;
 			if (syncMessage.getRequest().isPresent()) {
 				System.out.println(printPrefix + "    Request: TODO");
 			}
-			;
 			if (syncMessage.getSent().isPresent()) {
 				System.out.println(printPrefix + "    Sent:");
 				SentTranscriptMessage sent = syncMessage.getSent().get();
@@ -174,19 +165,15 @@ public class SignalMessagePrinter {
 					System.out.println(printPrefix + "        isRecipientUpdate");
 				}
 			}
-			;
 			if (syncMessage.getStickerPackOperations().isPresent()) {
 				System.out.println(printPrefix + "    StickerPackOperations: TODO");
 			}
-			;
 			if (syncMessage.getVerified().isPresent()) {
 				System.out.println(printPrefix + "    Verified: TODO");
 			}
-			;
 			if (syncMessage.getViewOnceOpen().isPresent()) {
 				System.out.println(printPrefix + "    ViewOnceOpen: TODO");
 			}
-			;
 		}
 		long timestamp = content.getTimestamp();
 		System.out.println(printPrefix + "  timestamp: " + timestamp);

@@ -42,6 +42,7 @@ This plug-in is a proof-of-concept with very little features:
   * one-to-one conversation
   * group conversations (linked only)
   * receiving attachments
+* Contact list download
 
 Please note that, as of now, you have to add your contacts manually and they appear "offline" in the buddy list.
 
@@ -50,7 +51,6 @@ For more functionality, check out [purple-signald](https://github.com/hoehermann
 ### Missing Features
 
 * Retry failed messages
-* Contact list download
 * Sending attachments
 * Proper group chats
 * Group chat management (explicit join, leave, administration, …)

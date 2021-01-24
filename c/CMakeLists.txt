@@ -38,6 +38,8 @@ set(SRC_LIST
     handler/message.hpp
     handler/attachment.cpp
     handler/attachment.hpp
+    handler/contact.cpp
+    handler/contact.hpp
     purplesignal/purplesignal.hpp
     purplesignal/account.cpp
     purplesignal/construction.cpp

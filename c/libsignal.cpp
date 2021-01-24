@@ -24,6 +24,7 @@
 
 const char * const SIGNAL_PLUGIN_ID  = "prpl-hehoe-signal";
 const char * const SIGNAL_PLUGIN_WEBSITE = "https://github.com/hoehermann/purple-signal";
+
 const char * const SIGNAL_OPTION_LIBDIR = "signal-cli-lib-dir";
 const char * const SIGNAL_DEFAULT_LIBDIR = "";
 const char * const SIGNAL_OPTION_SHOW_SYSTEM = "show-system-messages";
@@ -67,7 +68,7 @@ signal_login(PurpleAccount *account)
         PurpleSignalConnection *sa = new PurpleSignalConnection(account, pc, libdir, purple_account_get_username(account));
         purple_connection_set_protocol_data(pc, sa);
         purple_connection_set_state(pc, PURPLE_CONNECTION_CONNECTED);
-        assume_all_buddies_online(account);
+        signal_assume_all_buddies_online(account);
     } catch (std::exception & e) {
         purple_connection_error(pc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, e.what());
     }
@@ -118,7 +119,7 @@ static void
 signal_add_buddy(PurpleConnection *pc, PurpleBuddy *buddy, PurpleGroup *group)
 {
     // does not actually do anything. buddy is added to pidgin's local list and is usable from there.
-    assume_buddy_online(pc->account, buddy);
+    signal_assume_buddy_online(pc->account, buddy);
 }
 
 static GList *

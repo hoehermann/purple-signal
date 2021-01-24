@@ -11,6 +11,7 @@
 #include "libsignal.hpp"
 #include "connection.hpp"
 #include "handler/async.hpp"
+#include "handler/contact.hpp"
 #include "handler/account.hpp"
 #include "handler/message.hpp"
 #include "handler/attachment.hpp"
@@ -130,6 +131,23 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handlePreviewNa
     // TODO
 }
 
+JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleContactNatively(JNIEnv *env, jclass, jlong jaccount, jstring jnumber, jstring jname) {
+    uintptr_t account = uintptr_t(jaccount);
+    auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
+        [
+            account = reinterpret_cast<PurpleAccount *>(account),
+            number = tjni_jstring_to_stdstring(env, jnumber), 
+            name = tjni_jstring_to_stdstring(env, jname)
+        ] () {
+            if (PurpleConnection * pc = signal_purple_account_get_connection(account)) {
+                signal_process_contact(pc, number, name);
+            }
+        }
+    );
+    PurpleSignalMessage *psm = new PurpleSignalMessage(do_in_main_thread, account);
+    signal_handle_message_async(psm);
+}
+
 /*
  * Retrieves a string from the connection's account's key value store.
  * I hope it is okay doing this asynchronously.
@@ -152,16 +170,16 @@ JNIEXPORT jstring JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_getSettingsS
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_setSettingsStringNatively(JNIEnv *env, jclass, jlong jaccount, jstring jkey, jstring jvalue) {
     uintptr_t account = uintptr_t(jaccount);
     auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
-            [
-                account = reinterpret_cast<PurpleAccount *>(account),
-                key = tjni_jstring_to_stdstring(env, jkey), 
-                value = tjni_jstring_to_stdstring(env, jvalue)
-            ] () {
-                if (signal_purple_account_exists(account)) {
-                    purple_account_set_string(account, key.c_str(), value.c_str());
-                }
+        [
+            account = reinterpret_cast<PurpleAccount *>(account),
+            key = tjni_jstring_to_stdstring(env, jkey), 
+            value = tjni_jstring_to_stdstring(env, jvalue)
+        ] () {
+            if (signal_purple_account_exists(account)) {
+                purple_account_set_string(account, key.c_str(), value.c_str());
             }
-        );
+        }
+    );
     PurpleSignalMessage *psm = new PurpleSignalMessage(do_in_main_thread, account);
     signal_handle_message_async(psm);
 }

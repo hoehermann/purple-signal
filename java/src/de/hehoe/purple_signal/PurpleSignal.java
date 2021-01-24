@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -27,16 +26,15 @@ import org.asamk.signal.manager.groups.GroupNotFoundException;
 import org.asamk.signal.manager.groups.GroupUtils;
 import org.asamk.signal.manager.groups.NotAGroupMemberException;
 import org.asamk.signal.manager.storage.SignalAccount;
+import org.asamk.signal.manager.storage.contacts.ContactInfo;
 import org.asamk.signal.util.SecurityProvider;
 import org.asamk.signal.util.Util;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidMessageException;
-import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.KeyBackupServicePinException;
 import org.whispersystems.signalservice.api.KeyBackupSystemNoDataException;
 import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
-import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
@@ -53,7 +51,7 @@ import org.whispersystems.signalservice.internal.configuration.SignalServiceConf
 public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
 	private Manager manager = null;
-	private long purpleAccount = 0; // TODO: remove this hack. for thread-safety, the callbacks do a lookup anyway.
+	private long purpleAccount = 0; // TODO: remove this hack. use number instead. as for thread-safety, the callbacks do a lookup anyway.
 	private boolean keepReceiving = false;
 	private Thread receiverThread = null;
 	private String username = null;
@@ -187,9 +185,10 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 				handleErrorNatively(this.purpleAccount, e.getMessage(), false);
 			}
 		} catch (Exception e) {
-			handleErrorNatively(this.purpleAccount, "Exception while waiting for message: " + e.getMessage(), false);
+			handleErrorNatively(this.purpleAccount, e.getClass().getName() + " while waiting for message: " + e.getMessage(), false);
+			e.printStackTrace();
 		} catch (Throwable t) {
-			handleErrorNatively(this.purpleAccount, "Unhandled exception while waiting for message.");
+			handleErrorNatively(this.purpleAccount, "Unhandled " + t.getClass().getName() + " while waiting for message.");
 			t.printStackTrace();
 		}
 		logNatively(DEBUG_LEVEL_INFO, "Receiving has finished.");
@@ -314,6 +313,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 						PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
 				}
 				// TODO: support all message types
+				// TODO: find out whether message types are mutually exclusive (they seem to be – but is it guaranteed?)
 			}
 		}
 	}
@@ -340,6 +340,13 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 				PURPLE_MESSAGE_SEND | PURPLE_MESSAGE_REMOTE_SEND | PURPLE_MESSAGE_DELAYED
 			// flags copied from EionRobb/purple-discord/blob/master/libdiscord.c
 			);
+		} else if (syncMessage.getContacts().isPresent()) {
+			List<ContactInfo> contacts = this.manager.account.getContactStore().getContacts();
+			System.err.println("Current contacts:");
+			for (ContactInfo contact : contacts) {
+				System.err.println("Number:" + contact.number + ", Name:" + contact.name);
+				handleContactNatively(this.purpleAccount, contact.number, contact.name);
+			}
 		} else {
 			handleMessageNatively(this.purpleAccount,
 				sender,
@@ -473,26 +480,28 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
 	public static native void logNatively(int level, String text);
 
-	public static native void handleMessageNatively(long connection, String chat, String sender, String content,
+	public static native void handleMessageNatively(long account, String chat, String sender, String content,
 			long timestamp, int flags);
 
-	public static native void handlePreviewNatively(long connection, String chat, String sender, byte[] preview,
+	public static native void handlePreviewNatively(long account, String chat, String sender, byte[] preview,
 			long timestamp, int flags);
 
-	public static native void handleAttachmentNatively(long connection, String chat, String sender,
+	public static native void handleAttachmentNatively(long account, String chat, String sender,
 			SignalServiceAttachmentPointer attachmentPtr, String fileName, int fileSize);
 
-	public static native void handleErrorNatively(long connection, String error, boolean fatal);
+	public static native void handleContactNatively(long account, String number, String name);
+	
+	public static native void handleErrorNatively(long account, String error, boolean fatal);
 
-	public static void handleErrorNatively(long connection, String error) {
-		handleErrorNatively(connection, error, true);
+	public static void handleErrorNatively(long account, String error) {
+		handleErrorNatively(account, error, true);
 	}
 
-	public static native void askRegisterOrLinkNatively(long connection);
+	public static native void askRegisterOrLinkNatively(long account);
 
-	public static native void handleQRCodeNatively(long connection, String deviceLinkUri);
+	public static native void handleQRCodeNatively(long account, String deviceLinkUri);
 
-	public static native void askVerificationCodeNatively(long connection);
+	public static native void askVerificationCodeNatively(long account);
 
 	public static native String getSettingsStringNatively(long account, String key, String defaultValue);
 

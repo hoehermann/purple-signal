@@ -6,6 +6,7 @@
 
 extern const char * const SIGNAL_PLUGIN_ID;
 extern const char * const SIGNAL_PLUGIN_WEBSITE;
+
 extern const char * const SIGNAL_OPTION_LIBDIR;
 extern const char * const SIGNAL_DEFAULT_LIBDIR;
 extern const char * const SIGNAL_OPTION_SHOW_SYSTEM;
