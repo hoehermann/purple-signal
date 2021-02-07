@@ -17,6 +17,7 @@ set(CMAKE_JAVA_COMPILE_FLAGS -encoding utf-8)
 # https://stackoverflow.com/questions/3179216/what-is-the-convention-for-word-separator-in-java-package-names
 add_jar(purple_signal 
     src/de/hehoe/purple_signal/PurpleSignal.java
+    src/de/hehoe/purple_signal/PurpleSignalGroupUtils.java
     submodules/signal-cli/src/main/java/org/asamk/signal/manager/Manager.java
     submodules/signal-cli/src/main/java/org/asamk/signal/manager/storage/SignalAccount.java
     submodules/signal-cli/src/main/java/org/asamk/signal/manager/storage/groups/JsonGroupStore.java

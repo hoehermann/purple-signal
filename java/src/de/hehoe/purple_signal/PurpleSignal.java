@@ -9,8 +9,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 import org.asamk.signal.manager.AttachmentInvalidException;
 import org.asamk.signal.manager.Manager;
@@ -27,6 +29,7 @@ import org.asamk.signal.manager.groups.GroupUtils;
 import org.asamk.signal.manager.groups.NotAGroupMemberException;
 import org.asamk.signal.manager.storage.SignalAccount;
 import org.asamk.signal.manager.storage.contacts.ContactInfo;
+import org.asamk.signal.manager.storage.groups.GroupInfo;
 import org.asamk.signal.util.SecurityProvider;
 import org.asamk.signal.util.Util;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -105,12 +108,29 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			
 			logNatively(DEBUG_LEVEL_INFO, "User " + manager.getUsername() + " is authorized.");
 			// TODO: use signal-cli's new getUserStatus to get actual status
-			startReceiving();
-
 			// TODO: signal account "connected"
+			startReceiving();
+			
+			updateLocalGroups();
 		}
 	}
 
+	public void updateLocalGroups() {
+		// this does not actually do anything
+		// right after login, the group store is always empty
+		// TODO: find out why this is the case. find out how to request groups from the server / master device
+        for (GroupInfo group : this.manager.getGroups()) {
+        	GroupId groupId = group.getGroupId();
+        	String chat = groupId.toBase64();
+        	String title = group.getTitle();
+        	System.err.println("Got group "+groupId+" with title "+title+".");
+        	handleContactNatively(this.purpleAccount, chat, title);
+        	if (PurpleSignalGroupUtils.resolveMembers(this.manager, group.getPendingMembers()).contains(this.username)) {
+    			joinGroup(groupId, chat, this.username);
+        	}
+        }
+	}
+	
 	public void linkAccount() throws TimeoutException, IOException {
 		ProvisioningManager provisioningManager = new ProvisioningManager(dataPath, serviceConfiguration,
 				BaseConfig.USER_AGENT);
@@ -396,26 +416,30 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			handleBodilessMessage(chat, source, dataMessage);
 		}
 	}
+	
+	private void joinGroup(GroupId groupId, String chat, String source) {
+		try {
+			// TODO: ask user before joining group
+			this.manager.updateGroup(groupId, null, null, null);
+			handleMessageNatively(this.purpleAccount,
+				chat,
+				source,
+				"[I updated (probably joined) this group.]",
+				0,
+				PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
+		} catch (IOException | GroupNotFoundException | AttachmentInvalidException | NotAGroupMemberException
+				| InvalidNumberException e) {
+			handleErrorNatively(this.purpleAccount,
+				e.getClass().getName() + " while updating group: " + e.getMessage(),
+				false);
+			e.printStackTrace();
+		}
+	}
 
 	private void handleBodilessMessage(String chat, String source, SignalServiceDataMessage dataMessage) {
 		if (dataMessage.getGroupContext().isPresent()) {
 			GroupId groupId = GroupUtils.getGroupId(dataMessage.getGroupContext().get());
-			try {
-				// TODO: ask user before joining group
-				this.manager.updateGroup(groupId, null, null, null);
-				handleMessageNatively(this.purpleAccount,
-					chat,
-					source,
-					"[I updated (probably joined) this group.]",
-					0,
-					PURPLE_MESSAGE_SYSTEM | PURPLE_MESSAGE_NO_LOG);
-			} catch (IOException | GroupNotFoundException | AttachmentInvalidException | NotAGroupMemberException
-					| InvalidNumberException e) {
-				handleErrorNatively(this.purpleAccount,
-					e.getClass().getName() + " while updating group: " + e.getMessage(),
-					false);
-				e.printStackTrace();
-			}
+			joinGroup(groupId, chat, source);
 		} else {
 			handleMessageNatively(this.purpleAccount,
 				chat,
