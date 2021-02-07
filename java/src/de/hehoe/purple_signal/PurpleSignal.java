@@ -88,9 +88,8 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 			// exceptions from init not caught, may bubble to C++
 
 			{
-				Manager m = this.manager;
 				try {
-					m.checkAccountState();
+					this.manager.checkAccountState();
 				} catch (AuthorizationFailedException e) {
 					logNatively(DEBUG_LEVEL_INFO, "Authorization failed, was the number registered elsewhere?");
 					askRegisterOrLinkNatively(this.purpleAccount);
