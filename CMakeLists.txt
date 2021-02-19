@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.11)
 set(PROJECT_NAME "purple-signal")
 project(${PROJECT_NAME})
-set(SIGNAL_CLI_JAR "signal-cli-0.7.4.jar")
+set(SIGNAL_CLI_VERSION "0.7.4")
+set(SIGNAL_CLI_JAR "signal-cli-${SIGNAL_CLI_VERSION}.jar")
 add_subdirectory(java)
 add_subdirectory(c)
