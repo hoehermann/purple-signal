@@ -20,7 +20,7 @@ import org.asamk.signal.manager.Manager.ReceiveMessageHandler;
 import org.asamk.signal.manager.NotRegisteredException;
 import org.asamk.signal.manager.ProvisioningManager;
 import org.asamk.signal.manager.RegistrationManager;
-import org.asamk.signal.manager.ServiceConfig;
+import org.asamk.signal.manager.config.ServiceEnvironment;
 import org.asamk.signal.manager.UserAlreadyExists;
 import org.asamk.signal.manager.groups.GroupId;
 import org.asamk.signal.manager.groups.GroupIdFormatException;
@@ -58,7 +58,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	private boolean keepReceiving = false;
 	private Thread receiverThread = null;
 	private String username = null;
-	private final SignalServiceConfiguration serviceConfiguration;
+	private final ServiceEnvironment serviceEnvironment;
 	private final File dataPath = null;
 	// dataPath is not actually being used. All data is redirected to libpurple's internal storage
 	// (see adjustments made to org.asamk.signal.manager.storageSignalAccount in signal-cli submodule).
@@ -71,7 +71,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
 	public PurpleSignal(long purpleAccount, String username)
 			throws IOException, TimeoutException, InvalidKeyException, UserAlreadyExists, NotRegisteredException {
-		serviceConfiguration = ServiceConfig.createDefaultServiceConfiguration(BaseConfig.USER_AGENT);
+		serviceEnvironment = ServiceEnvironment.LIVE;
 
 		this.purpleAccount = purpleAccount;
 		this.username = username;
@@ -87,7 +87,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 		} else {
 			// the rest is adapted from signal-cli/src/main/java/org/asamk/signal/Main.java
 
-			this.manager = Manager.init(username, dataPath, serviceConfiguration, BaseConfig.USER_AGENT);
+			this.manager = Manager.init(username, dataPath, serviceEnvironment, BaseConfig.USER_AGENT);
 			// exceptions from init not caught, may bubble to C++
 
 			{
@@ -102,7 +102,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
 			final String profileName = getSettingsStringNatively(this.purpleAccount, "profile-name", "");
 			if (!profileName.isEmpty()) {
-				this.manager.setProfile(profileName, null);
+				this.manager.setProfile(profileName, null, null, null);
 				// exception may bubble to C++
 			}
 			
@@ -132,7 +132,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 	}
 	
 	public void linkAccount() throws TimeoutException, IOException {
-		ProvisioningManager provisioningManager = new ProvisioningManager(dataPath, serviceConfiguration,
+		ProvisioningManager provisioningManager = ProvisioningManager.init(dataPath, serviceEnvironment,
 				BaseConfig.USER_AGENT);
 		String deviceLinkUri = provisioningManager.getDeviceLinkUri();
 		handleQRCodeNatively(this.purpleAccount, deviceLinkUri);
@@ -165,7 +165,7 @@ public class PurpleSignal implements ReceiveMessageHandler, Runnable {
 
 	public void registerAccount(boolean voiceVerification, String captcha) throws IOException {
 		if (this.registrationManager == null) {
-			this.registrationManager = RegistrationManager.init(username, dataPath, serviceConfiguration, BaseConfig.USER_AGENT);
+			this.registrationManager = RegistrationManager.init(username, dataPath, serviceEnvironment, BaseConfig.USER_AGENT);
 		}
 		this.registrationManager.register(voiceVerification, captcha);
 		askVerificationCodeNatively(this.purpleAccount);

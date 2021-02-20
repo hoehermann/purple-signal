@@ -31,10 +31,10 @@ set(CMAKE_JAVA_COMPILE_FLAGS -encoding utf-8)
 add_jar(purple_signal 
     src/de/hehoe/purple_signal/PurpleSignal.java
     src/de/hehoe/purple_signal/PurpleSignalGroupUtils.java
-    submodules/signal-cli/src/main/java/org/asamk/signal/manager/Manager.java
-    submodules/signal-cli/src/main/java/org/asamk/signal/manager/storage/SignalAccount.java
-    submodules/signal-cli/src/main/java/org/asamk/signal/manager/storage/groups/JsonGroupStore.java
-    src/de/hehoe/purple_signal/SignalMessagePrinter.java
+    src/de/hehoe/purple_signal/SignalMessagePrinter.java # debug tool
+    submodules/signal-cli/lib/src/main/java/org/asamk/signal/manager/Manager.java
+    submodules/signal-cli/lib/src/main/java/org/asamk/signal/manager/storage/SignalAccount.java
+    submodules/signal-cli/lib/src/main/java/org/asamk/signal/manager/storage/groups/JsonGroupStore.java
     ENTRY_POINT de/hehoe/purple_signal/PurpleSignal
     GENERATE_NATIVE_HEADERS purple_signal_native # this needs at least CMake 3.11
 )

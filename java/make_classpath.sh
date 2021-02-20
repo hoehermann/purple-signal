@@ -13,6 +13,7 @@ cat <<EOF
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="src" path="submodules/signal-cli/src/main/java"/>
+	<classpathentry kind="src" path="submodules/signal-cli/lib/src/main/java"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
 		<attributes>
 			<attribute name="module" value="true"/>
