@@ -21,24 +21,15 @@ std::string tjni_jstring_to_stdstring(JNIEnv *env, jstring jstr) {
 void tjni_exception_check(TypedJNIEnv *tenv) {
     if (tenv->env->ExceptionCheck()) {
         jthrowable jexception = tenv->env->ExceptionOccurred();
+        TypedJNIObject exception = TypedJNIObject(
+            tenv->env,
+            tenv->find_class("java/lang/Throwable").cls,
+            jexception
+        );
         if (true) { // TODO: "if purple -d active"
-            TypedJNIMethod<void()>::get(
-                TypedJNIObject(
-                    tenv->env,
-                    tenv->find_class("java/lang/Throwable").cls,
-                    jexception
-                ),
-                "printStackTrace"
-            )();
+            exception.GetMethod<void()>("printStackTrace")();
         }
-        jstring jstr = TypedJNIMethod<jstring()>::get(
-            TypedJNIObject(
-                tenv->env, 
-                tenv->find_class("java/lang/Object").cls, 
-                jexception
-            ), 
-            "toString"
-        )();
+        jstring jstr = exception.GetMethod<jstring()>("toString")();
         throw std::runtime_error(tjni_jstring_to_stdstring(tenv->env, jstr));
     }
 }
