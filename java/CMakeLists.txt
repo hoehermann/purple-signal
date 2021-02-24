@@ -3,19 +3,25 @@ find_package(Java COMPONENTS Development)
 find_package(JNI REQUIRED)
 
 set(SIGNAL_CLI_LIB_DIR "/opt/signal-cli/lib" CACHE PATH "Path to signal-cli's jar files.")
-if (NOT EXISTS ${SIGNAL_CLI_LIB_DIR}/${SIGNAL_CLI_JAR})
+if (NOT EXISTS "${SIGNAL_CLI_LIB_DIR}/${SIGNAL_CLI_JAR}")
     set(SIGNAL_CLI_TGZ "${CMAKE_BINARY_DIR}/signal-cli-${SIGNAL_CLI_VERSION}.tar.gz")
-    if(NOT EXISTS ${SIGNAL_CLI_TGZ})
-        file(DOWNLOAD "https://github.com/AsamK/signal-cli/releases/download/v${SIGNAL_CLI_VERSION}/signal-cli-${SIGNAL_CLI_VERSION}.tar.gz" ${SIGNAL_CLI_TGZ} SHOW_PROGRESS) # TODO: check status
+    if(NOT EXISTS "${SIGNAL_CLI_TGZ}")
+        file(DOWNLOAD "https://github.com/AsamK/signal-cli/releases/download/v${SIGNAL_CLI_VERSION}/signal-cli-${SIGNAL_CLI_VERSION}.tar.gz" "${SIGNAL_CLI_TGZ}" SHOW_PROGRESS) # TODO: check status
     endif()
     set(SIGNAL_CLI_LIB_DIR "${CMAKE_BINARY_DIR}/signal-cli-${SIGNAL_CLI_VERSION}/lib")
-    if(NOT EXISTS ${SIGNAL_CLI_LIB_DIR}/${SIGNAL_CLI_JAR})
-        execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzvf ${SIGNAL_CLI_TGZ} RESULT_VARIABLE tar_result) # TODO: find out how this performs on Windows
-        message(STATUS "tar_result is ${tar_result}")
+    if(NOT EXISTS "${SIGNAL_CLI_LIB_DIR}/${SIGNAL_CLI_JAR}")
+        execute_process(COMMAND "${CMAKE_COMMAND}" -E tar xzvf "${SIGNAL_CLI_TGZ}")
+        # NOTE: return value can be 0 even in case of error
         #file(ARCHIVE_EXTRACT INPUT ${SIGNAL_CLI_TGZ}) # this needs at least CMake 3.18
     endif()
+    set(ZKGROUP_DLL "${CMAKE_BINARY_DIR}/libzkgroup.so") # deliberately misnamed zkgroup.dll so existing file can be overwritten in jar
+    if(WIN32 AND NOT EXISTS "${ZKGROUP_DLL}")
+        file(DOWNLOAD "https://github.com/dennisameling/zkgroup/releases/download/v0.7.1-test6/libzkgroup-ia32.dll" "${ZKGROUP_DLL}" SHOW_PROGRESS)
+        execute_process(COMMAND "${Java_JAR_EXECUTABLE}" --update --file "${SIGNAL_CLI_LIB_DIR}/zkgroup-java-0.7.0.jar" -C "${CMAKE_BINARY_DIR}" libzkgroup.so)
+    endif()
+    # TODO: have signal_jni.dll for signal-client-java-0.2.3.jar
 endif()
-if (NOT EXISTS ${SIGNAL_CLI_LIB_DIR}/${SIGNAL_CLI_JAR})
+if (NOT EXISTS "${SIGNAL_CLI_LIB_DIR}/${SIGNAL_CLI_JAR}")
     message(FATAL_ERROR "${SIGNAL_CLI_JAR} not found. Please set SIGNAL_CLI_LIB_DIR to the directory with signal-cli's jar files.")
 endif()
 message(STATUS "SIGNAL_CLI_LIB_DIR: ${SIGNAL_CLI_LIB_DIR}")

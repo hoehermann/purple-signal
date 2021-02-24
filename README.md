@@ -4,6 +4,8 @@ A libpurple/Pidgin plugin for signal (formerly textsecure). Using [modified part
 
 Developed on Ubuntu 20.04. Tested wine 5.0 and Windows 10.
 
+*Windows builds currently dysfunctional due to Signal protocol binaries being unavailable.*
+
 ![Instant Message](/screenshot_win32.png?raw=true "Instant Message on Windows Screenshot")  
 
 ### Download
@@ -21,7 +23,7 @@ Please note this is the third purple plugin I have ever written. I still have no
 
 ### Alternative Backends
 
-These back-ends were considered, but not used.
+These back-ends were considered, but not used:
 
 * [libsignal-service-java](https://github.com/signalapp/Signal-Android/tree/master/libsignal/service) cannot link to existing accounts
 * [SignalProtocolKit](https://github.com/signalapp/SignalProtocolKit) deprecated, recommends libsignal-protocol-c

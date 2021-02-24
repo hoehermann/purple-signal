@@ -12,7 +12,7 @@ class PurpleSignalXferData {
     PurpleSignalConnection *psc;
     const std::shared_ptr<_jobject> attachment;
     const std::string sender;
-    std::function<int(guchar **buffer)> read;
+    std::function<int(guchar **buffer)> read_fnc;
     PurpleSignalXferData(
         PurpleSignalConnection *psc, 
         const std::shared_ptr<_jobject> attachment, 
@@ -49,7 +49,7 @@ signal_process_attachment(
         const std::string local_file_name = purple_xfer_get_local_filename(xfer);
         PurpleSignalXferData * psxd = reinterpret_cast<PurpleSignalXferData *>(xfer->data);
         try {
-            psxd->read = psxd->psc->ps.acceptAttachment(psxd->attachment.get(), local_file_name);
+            psxd->read_fnc = psxd->psc->ps.acceptAttachment(psxd->attachment.get(), local_file_name);
             purple_xfer_prpl_ready(xfer); // invokes do_transfer which invokes read_fnc
         } catch (std::exception & e) {
             purple_xfer_error(purple_xfer_get_type(xfer), purple_xfer_get_account(xfer), purple_xfer_get_remote_user(xfer), e.what());
@@ -59,7 +59,7 @@ signal_process_attachment(
 
     purple_xfer_set_read_fnc(xfer, [](guchar **buffer, PurpleXfer * xfer) -> gssize {
         PurpleSignalXferData * psxd = reinterpret_cast<PurpleSignalXferData *>(xfer->data);
-        return psxd->read(buffer);
+        return psxd->read_fnc(buffer);
     });
     
     purple_xfer_set_ack_fnc(xfer, [](PurpleXfer * xfer, const guchar *, size_t size){
