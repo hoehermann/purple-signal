@@ -5,9 +5,14 @@
 #include "utils.hpp"
 #include "purplesignal.hpp"
 
+#include <iostream> // for debugging
+
 void PurpleSignal::register_account(bool voice, const std::string & captcha) {
+    std::cerr << "PurpleSignal::register_account pre" << std::endl;
     instance.GetMethod<void(jboolean, jstring)>("registerAccount")(voice, jvm->make_jstring(captcha));
+    std::cerr << "PurpleSignal::register_account post" << std::endl;
     tjni_exception_check(jvm);
+    std::cerr << "PurpleSignal::register_account fin" << std::endl;
 }
 
 void PurpleSignal::link_account() {

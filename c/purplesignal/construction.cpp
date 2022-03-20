@@ -6,9 +6,9 @@
 #include "utils.hpp"
 #include "../handler/async.hpp" // for signal_debug (not really needed)
 
-PurpleSignal::PurpleSignal(TypedJNIEnv *jvm, uintptr_t account, const std::string & username) : 
-    jvm(jvm), instance(jvm->find_class("de/hehoe/purple_signal/PurpleSignal").GetConstructor<jlong,jstring>()(
-        account, jvm->make_jstring(username)
+PurpleSignal::PurpleSignal(TypedJNIEnv *jvm, const std::string & settings_path, const std::string & username) : 
+    jvm(jvm), instance(jvm->find_class("de/hehoe/purple_signal/PurpleSignal").GetConstructor<jstring,jstring>()(
+        jvm->make_jstring(settings_path), jvm->make_jstring(username)
     )) {
     tjni_exception_check(jvm); // check for exceptions lingering in Java VM from calling GetConstructor
     send_message = instance.GetMethod<jint(jstring,jstring)>("sendMessage");

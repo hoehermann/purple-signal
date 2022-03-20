@@ -65,7 +65,8 @@ signal_login(PurpleAccount *account)
 
     try {
         purple_connection_set_state(pc, PURPLE_CONNECTION_CONNECTING);
-        PurpleSignalConnection *sa = new PurpleSignalConnection(account, pc, libdir, purple_account_get_username(account));
+        std::string user_dir(purple_user_dir());
+        PurpleSignalConnection *sa = new PurpleSignalConnection(user_dir+"/signal", account, pc, libdir, purple_account_get_username(account));
         purple_connection_set_protocol_data(pc, sa);
         purple_connection_set_state(pc, PURPLE_CONNECTION_CONNECTED);
         signal_assume_all_buddies_online(account);

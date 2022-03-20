@@ -6,19 +6,40 @@
  * The PurpleSignalConnectionFunction body may throw an exception. It is caught in the the main thread.
  */
 
+#include <iostream>
 #include <vector>
 #include "de_hehoe_purple_signal_PurpleSignal.h"
 #include "libsignal.hpp"
 #include "connection.hpp"
 #include "handler/async.hpp"
-#include "handler/contact.hpp"
 #include "handler/account.hpp"
 #include "handler/message.hpp"
 #include "handler/attachment.hpp"
 #include "purplesignal/utils.hpp"
 #include "purplesignal/error.hpp"
 
-JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleQRCodeNatively(JNIEnv *env, jclass cls, jlong jaccount, jstring jmessage) {
+
+/*
+ * Looking through all accounts, trying to find one handling the username we are looking for.
+ */
+static PurpleAccount * lookup_account_by_username(const std::string & username) {
+    std::cerr << "lookup_account_by_username" << std::endl;
+    PurpleAccount *out = nullptr;
+    // TODO: bitlbee does not implement purple_accounts_get_all – search connections instead
+    for (GList *iter = purple_accounts_get_all(); iter != NULL && out == nullptr; iter = iter->next) {
+        PurpleAccount *account = (PurpleAccount *)iter->data;
+        const char *u = purple_account_get_username(account);
+        const char *id = purple_account_get_protocol_id(account);
+        if (!strcmp(SIGNAL_PLUGIN_ID, id) && username == u) {
+            out = account;
+        };
+    }
+    return out;
+}
+
+JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleQRCodeNatively(JNIEnv *env, jclass cls, jstring jusername, jstring jmessage) {
+    std::cerr << "handleQRCodeNatively" << std::endl;
+    /*
     uintptr_t account = uintptr_t(jaccount);
     auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
             [
@@ -34,14 +55,14 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleQRCodeNat
         );
     PurpleSignalMessage *psm = new PurpleSignalMessage(do_in_main_thread, account);
     signal_handle_message_async(psm);
+    */
 }
 
-JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_askRegisterOrLinkNatively(JNIEnv *env, jclass cls, jlong jaccount) {
-    uintptr_t account = uintptr_t(jaccount);
+JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_askRegisterOrLinkNatively(JNIEnv *env, jclass cls, jstring jusername) {
+    std::cerr << "askRegisterOrLinkNatively" << std::endl;
+    PurpleAccount *account = lookup_account_by_username(tjni_jstring_to_stdstring(env, jusername));
     auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
-            [
-                account = reinterpret_cast<PurpleAccount *>(account)
-            ] () {
+            [account] () {
                 if (PurpleConnection * pc = signal_purple_account_get_connection(account)) {
                     signal_ask_register_or_link(pc);
                 }
@@ -51,7 +72,9 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_askRegisterOrLi
     signal_handle_message_async(psm);
 }
 
-JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_askVerificationCodeNatively(JNIEnv *env, jclass cls, jlong jaccount) {
+JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_askVerificationCodeNatively(JNIEnv *env, jclass cls, jstring jusername) {
+    std::cerr << "askVerificationCodeNatively" << std::endl;
+    /*
     uintptr_t account = uintptr_t(jaccount);
     auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
             [
@@ -64,9 +87,12 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_askVerification
         );
     PurpleSignalMessage *psm = new PurpleSignalMessage(do_in_main_thread, account);
     signal_handle_message_async(psm);
+    */
 }
 
-JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleErrorNatively(JNIEnv *env, jclass cls, jlong jaccount, jstring jmessage, jboolean fatal) {
+JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleErrorNatively(JNIEnv *env, jclass cls, jstring jusername, jstring jmessage, jboolean fatal) {
+    std::cerr << "handleErrorNatively" << std::endl;
+    /*
     uintptr_t account = uintptr_t(jaccount);
     auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
         [
@@ -78,14 +104,18 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleErrorNati
     );
     PurpleSignalMessage *psm = new PurpleSignalMessage(do_in_main_thread, account);
     signal_handle_message_async(psm);
+    */
 }
 
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_logNatively(JNIEnv *env, jclass cls, jint level, jstring jmessage) {
+    std::cerr << "logNatively" << std::endl;
     // writing to the console does not involve the GTK event loop and can happen asynchronously
     signal_debug(static_cast<PurpleDebugLevel>(level), tjni_jstring_to_stdstring(env, jmessage));
 }
 
-JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNatively(JNIEnv *env, jclass cls, jlong jaccount, jstring jchat, jstring jsender, jstring jmessage, jlong timestamp, jint flags) {
+JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNatively(JNIEnv *env, jclass cls, jstring jusername, jstring jchat, jstring jsender, jstring jmessage, jlong timestamp, jint flags) {
+    std::cerr << "handleMessageNatively" << std::endl;
+    /*
     uintptr_t account = uintptr_t(jaccount);
     auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
         [
@@ -103,9 +133,12 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleMessageNa
     );
     PurpleSignalMessage *psm = new PurpleSignalMessage(do_in_main_thread, account);
     signal_handle_message_async(psm);
+    */
 }
 
-JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleAttachmentNatively(JNIEnv *env, jclass cls, jlong jaccount, jstring jchat, jstring jsender, jobject jattachmentPtr, jstring jfileName, jint fileSize) {
+JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleAttachmentNatively(JNIEnv *env, jclass cls, jstring jusername, jstring jchat, jstring jsender, jobject jattachmentPtr, jstring jfileName, jint fileSize) {
+    std::cerr << "handleAttachmentNatively" << std::endl;
+    /*
     uintptr_t account = uintptr_t(jaccount);
     auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
         [
@@ -113,6 +146,7 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleAttachmen
             chat = tjni_jstring_to_stdstring(env, jchat), 
             sender = tjni_jstring_to_stdstring(env, jsender),
             attachment = std::shared_ptr<_jobject>(env->NewGlobalRef(jattachmentPtr), [env](jobject o){
+                std::cerr << "DeleteGlobalRef(jattachmentPtr = " << o << ") " << std::endl;
                 env->DeleteGlobalRef(o);
             }),
             file_name = tjni_jstring_to_stdstring(env, jfileName), 
@@ -125,34 +159,21 @@ JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleAttachmen
     );
     PurpleSignalMessage *psm = new PurpleSignalMessage(do_in_main_thread, account);
     signal_handle_message_async(psm);
+    */
 }
 
 JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handlePreviewNatively(JNIEnv *, jclass, jlong, jstring, jstring, jbyteArray, jlong, jint) {
+    std::cerr << "handlePreviewNatively" << std::endl;
     // TODO
-}
-
-JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_handleContactNatively(JNIEnv *env, jclass, jlong jaccount, jstring jnumber, jstring jname) {
-    uintptr_t account = uintptr_t(jaccount);
-    auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
-        [
-            account = reinterpret_cast<PurpleAccount *>(account),
-            number = tjni_jstring_to_stdstring(env, jnumber), 
-            name = tjni_jstring_to_stdstring(env, jname)
-        ] () {
-            if (PurpleConnection * pc = signal_purple_account_get_connection(account)) {
-                signal_process_contact(pc, number, name);
-            }
-        }
-    );
-    PurpleSignalMessage *psm = new PurpleSignalMessage(do_in_main_thread, account);
-    signal_handle_message_async(psm);
 }
 
 /*
  * Retrieves a string from the connection's account's key value store.
  * I hope it is okay doing this asynchronously.
  */
-JNIEXPORT jstring JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_getSettingsStringNatively(JNIEnv *env, jclass, jlong jaccount, jstring jkey, jstring jdefault_value) {
+JNIEXPORT jstring JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_getSettingsStringNatively(JNIEnv *env, jclass, jstring jusername, jstring jkey, jstring jdefault_value) {
+    std::cerr << "getSettingsStringNatively" << std::endl;
+    /*
     PurpleAccount * account = reinterpret_cast<PurpleAccount *>(jaccount);
     if (signal_purple_account_exists(account)) {
         const std::string key = tjni_jstring_to_stdstring(env, jkey);
@@ -162,42 +183,29 @@ JNIEXPORT jstring JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_getSettingsS
     } else {
         return NULL;
     }
+    */
+    return NULL;
 }
 
 /*
  * Writes a string to the account.
  */
-JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_setSettingsStringNatively(JNIEnv *env, jclass, jlong jaccount, jstring jkey, jstring jvalue) {
+JNIEXPORT void JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_setSettingsStringNatively(JNIEnv *env, jclass, jstring jusername, jstring jkey, jstring jvalue) {
+    std::cerr << "setSettingsStringNatively" << std::endl;
+    /*
     uintptr_t account = uintptr_t(jaccount);
     auto do_in_main_thread = std::make_unique<PurpleSignalConnectionFunction>(
-        [
-            account = reinterpret_cast<PurpleAccount *>(account),
-            key = tjni_jstring_to_stdstring(env, jkey), 
-            value = tjni_jstring_to_stdstring(env, jvalue)
-        ] () {
-            if (signal_purple_account_exists(account)) {
-                purple_account_set_string(account, key.c_str(), value.c_str());
+            [
+                account = reinterpret_cast<PurpleAccount *>(account),
+                key = tjni_jstring_to_stdstring(env, jkey), 
+                value = tjni_jstring_to_stdstring(env, jvalue)
+            ] () {
+                if (signal_purple_account_exists(account)) {
+                    purple_account_set_string(account, key.c_str(), value.c_str());
+                }
             }
-        }
-    );
+        );
     PurpleSignalMessage *psm = new PurpleSignalMessage(do_in_main_thread, account);
     signal_handle_message_async(psm);
-}
-
-/*
- * Looking through all accounts, trying to find one handling the username we are looking for.
- * This is dangerous. I feel dirty.
- */
-JNIEXPORT jlong JNICALL Java_de_hehoe_purple_1signal_PurpleSignal_lookupAccountByUsernameNatively(JNIEnv *env, jclass, jstring jusername) {
-    PurpleAccount *out = 0;
-    const std::string username = tjni_jstring_to_stdstring(env, jusername);
-    for (GList *iter = purple_accounts_get_all(); iter != NULL && out == 0; iter = iter->next) {
-        PurpleAccount *account = (PurpleAccount *)iter->data;
-        const char *u = purple_account_get_username(account);
-        const char *id = purple_account_get_protocol_id(account);
-        if (!strcmp(SIGNAL_PLUGIN_ID, id) && username == u) {
-            out = account;
-        };
-    }
-    return (jlong)out;
+    */
 }

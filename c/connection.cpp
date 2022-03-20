@@ -10,14 +10,15 @@
 #include "environment.hpp"
 
 PurpleSignalConnection::PurpleSignalConnection(
-    PurpleAccount *account, 
+    const std::string & settings_dir, 
+    PurpleAccount *account,
     PurpleConnection *pc, 
     const std::string & signal_lib_directory, 
     const std::string & username
 ) :
-    account(account), 
+    account(account),
     connection(pc),
-    ps(PurpleSignalEnvironment::get(signal_lib_directory), uintptr_t(account), username) {
+    ps(PurpleSignalEnvironment::get(signal_lib_directory), settings_dir, username) {
 };
     
 PurpleSignalConnection::~PurpleSignalConnection() {

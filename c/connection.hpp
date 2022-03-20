@@ -15,7 +15,8 @@ class PurpleSignalConnection {
     PurpleSignal ps;
     
     PurpleSignalConnection(
-        PurpleAccount *account, 
+        const std::string & settings_dir,
+        PurpleAccount *account,
         PurpleConnection *pc, 
         const std::string & signal_lib_directory, 
         const std::string & username

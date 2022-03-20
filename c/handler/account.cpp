@@ -9,6 +9,8 @@
 #include <sstream>
 #include "../purple_compat.h"
 
+#include <iostream> // for debugging
+
 void signal_show_qr_code(PurpleConnection *pc, const std::string & qr_code_ppm, const std::string & qr_raw_data) {
     PurpleSignalConnection *sa = static_cast<PurpleSignalConnection *>(purple_connection_get_protocol_data(pc));
 
@@ -126,11 +128,12 @@ const int SIGNAL_ACCOUNT_VERIFY = 2;
 
 void
 signal_ask_register_or_link_ok_cb(PurpleSignalConnection *sa, int choice) {
+    std::cerr << "signal_ask_register_or_link_ok_cb" << std::endl;
     try {
         switch (choice) {
             case SIGNAL_ACCOUNT_LINK: sa->ps.link_account(); break;
             case SIGNAL_ACCOUNT_REGISTER: 
-                sa->ps.register_account(false, nullptr); // TODO: give option for voice registration
+                sa->ps.register_account(false, ""); // TODO: give option for voice registration
                 //signal_ask_captcha(sa); // TODO: ask for captcha iff needed
                 break;
             case SIGNAL_ACCOUNT_VERIFY: signal_ask_verification_code(sa->connection); break;

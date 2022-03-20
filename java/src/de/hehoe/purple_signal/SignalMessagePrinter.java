@@ -26,20 +26,12 @@ public class SignalMessagePrinter {
 		System.out.println(printPrefix + "SignalServiceEnvelope");
 		long serverTimestamp = 0;// envelope.getServerTimestamp();
 		System.out.println(printPrefix + "  ServerTimestamp: " + serverTimestamp);
-		if (envelope.hasSource()) {
-			SignalServiceAddress sourceAddress = envelope.getSourceAddress();
-			System.out.println(printPrefix + "  SourceAddress:");
-			if (sourceAddress.getNumber().isPresent()) {
-				String number = sourceAddress.getNumber().get();
-				System.out.println(printPrefix + "    Number: " + number);
-			}
-			// envelope.getSourceDevice();
-			// envelope.getSourceE164();
-			// envelope.getSourceIdentifier();
-			// envelope.getSourceUuid();
-		}
 		long timestamp = envelope.getTimestamp();
 		System.out.println(printPrefix + "  Timestamp: " + timestamp);
+		if (envelope.hasSourceUuid()) {
+			String uuid = envelope.getSourceUuid().get();
+			System.out.println(printPrefix + "  SourceUuid: " + uuid);
+		}
 		if (envelope.isPreKeySignalMessage()) {
 			System.out.println(printPrefix + "  isPreKeySignalMessage");
 		}
@@ -129,10 +121,11 @@ public class SignalMessagePrinter {
 						String number = destination.getNumber().get();
 						System.out.println(printPrefix + "        Number: " + number);
 					}
+					/*
 					if (destination.getRelay().isPresent()) {
 						String relay = destination.getRelay().get();
 						System.out.println(printPrefix + "        Relay: " + relay);
-					}
+					}*/
 				}
 				long expirationStartTimestamp = sent.getExpirationStartTimestamp();
 				if (expirationStartTimestamp > 0) {

@@ -80,4 +80,4 @@ void signal_debug(PurpleDebugLevel level, const std::string & message) {
     purple_debug(level, "signal", "%s\n", message.c_str());
 }
 
-PurpleSignalMessage::PurpleSignalMessage(std::unique_ptr<PurpleSignalConnectionFunction> & function, uintptr_t account) : account(account), function(std::move(function)) {};
+PurpleSignalMessage::PurpleSignalMessage(std::unique_ptr<PurpleSignalConnectionFunction> & function, PurpleAccount *account) : account(account), function(std::move(function)) {};

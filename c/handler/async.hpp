@@ -7,17 +7,17 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include <purple.h> // for PurpleDebugLevel
+#include <purple.h> // for PurpleDebugLevel and PurpleAccount
 
 typedef std::function<void()> PurpleSignalConnectionFunction;
 
 class PurpleSignalMessage {
     public:
-    const uintptr_t account;
+    const PurpleAccount *account;
     const std::unique_ptr<PurpleSignalConnectionFunction> function;
     PurpleSignalMessage(const PurpleSignalMessage&) = delete;
     PurpleSignalMessage& operator=(const PurpleSignalMessage&) = delete;
-    PurpleSignalMessage(std::unique_ptr<PurpleSignalConnectionFunction> & function, uintptr_t account);
+    PurpleSignalMessage(std::unique_ptr<PurpleSignalConnectionFunction> & function, PurpleAccount *account);
 };
 
 void signal_handle_message_async(PurpleSignalMessage *psm);

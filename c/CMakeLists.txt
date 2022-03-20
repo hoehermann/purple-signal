@@ -1,10 +1,6 @@
 # based on skype4pidgin/skypeweb/CMakeLists.txt
 
 find_package(JNI REQUIRED)
-find_package(PkgConfig)
-if (PKG_CONFIG_FOUND)
-    pkg_check_modules(PURPLE REQUIRED purple)
-endif()
 
 message(STATUS
 "PURPLE_INCLUDE_DIRS: ${PURPLE_INCLUDE_DIRS}"
@@ -98,32 +94,6 @@ target_link_libraries(${TARGET_NAME}
     purple_signal_native # this is a target defined by the Java part. needs CMake 3.11
     )
 
-option(EMBED_JAVA_BYTECODE "Embed PurpleSignal.class into shared library." OFF)
-if (EMBED_JAVA_BYTECODE)
-    get_target_property(_classDir purple_signal CLASSDIR)
-    add_custom_target(
-        embed_purple_signal
-        # TODO: find a CMake-ier way of generating this file
-        ld -r -b binary -o ${CMAKE_CURRENT_BINARY_DIR}/PurpleSignal.o ${_classDir}/de/hehoe/purple_signal/PurpleSignal.class
-    )
-    add_dependencies(purple-signal embed_purple_signal)
-    target_link_libraries(${TARGET_NAME}
-        ${CMAKE_CURRENT_BINARY_DIR}/PurpleSignal.o
-        )
-endif()
-
-if (PKG_CONFIG_FOUND)
-    exec_program("${PKG_CONFIG_EXECUTABLE} --variable=plugindir purple 2>/dev/null"
-        OUTPUT_VARIABLE LIB_INSTALL_DIR
-        RETURN_VALUE PURPLE_PLUGINDIR_RET
-        )
-    if (NOT PURPLE_PLUGINDIR_RET EQUAL 0)
-        message(WARNING "${PKG_CONFIG_EXECUTABLE} --variable=plugindir purple -- returned a non-null error code")
-    else()
-        install(TARGETS ${TARGET_NAME} DESTINATION ${LIB_INSTALL_DIR})
-    endif()
-endif()
-
 file(STRINGS "../VERSION" SIGNAL_PLUGIN_VERSION)
 message(STATUS "SIGNAL_PLUGIN_VERSION ${SIGNAL_PLUGIN_VERSION}")
 
@@ -146,4 +116,11 @@ if (MINGW)
     # but also see https://github.com/kcat/alure/commit/e9f8f60
     # and https://stackoverflow.com/questions/13768515/how-to-do-static-linking-of-libwinpthread-1-dll-in-mingw
     target_link_libraries(${TARGET_NAME} -static-libgcc -static-libstdc++)
+endif()
+
+message(STATUS "PURPLE_PLUGIN_DIR: ${PURPLE_PLUGIN_DIR}")
+if (WIN32)
+    install(TARGETS ${TARGET_NAME} RUNTIME DESTINATION "${PURPLE_PLUGIN_DIR}")
+else()
+    install(TARGETS ${TARGET_NAME} DESTINATION "${PURPLE_PLUGIN_DIR}")
 endif()
