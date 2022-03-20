@@ -2,15 +2,22 @@
 
 A libpurple/Pidgin plugin for signal (formerly textsecure). Using [modified parts](https://github.com/hoehermann/signal-cli/) of [signal-cli](https://github.com/AsamK/signal-cli) which in turn is employing [a fork of the official implementation](https://github.com/Turasa/libsignal-service-java).
 
-Developed on Ubuntu 20.04. Tested wine 5.0 and Windows 10.
-
-*Windows builds currently dysfunctional due to Signal protocol binaries being unavailable.*
-
 ![Instant Message](/screenshot_win32.png?raw=true "Instant Message on Windows Screenshot")  
+
+### State
+
+**This plug-in is no longer being developed.** The author writes:
+
+> This plug-in essentially was a C/C++ wrapper around the (official) Java implementation libsignal-service-java. However, Signal itself is moving away from their own reference implementation. They now favour libsignal-client, which implements the same functionality in Rust. This plug-in ended up as a C wrapper around a Java compatibility layer around a Rust binary which is hard to build. Everything is moving in different directions and nothing is stable. Even nodejs seems to be involved at some point. 
+>
+> Moving away from the platform-independent Java implementation, Signal has pulled support win32 so hard [not even third parties can maintain it](https://github.com/signalapp/Signal-Desktop/issues/1636#issuecomment-1051237708). Maybe [purple-signald](https://github.com/hoehermann/libpurple-signald) will be revived so at least Linux users can have Signal in Pidgin again.
 
 ### Download
 
-Binaries are availiable at https://buildbot.hehoe.de/purple-signal/builds/. See [INSTALL](INSTALL.md) on how to install this plug-in.
+Binaries once were availiable at https://buildbot.hehoe.de/purple-signal/builds/.  
+
+See [INSTALL](INSTALL.md) on how to install this plug-in.  
+If you want to build the plug-in yourself see [BUILD](BUILD.md).
 
 ### Concept
 
@@ -64,6 +71,5 @@ For more functionality, check out [purple-signald](https://github.com/hoehermann
 * If the plug-in crashes while handling a message, the message is lost.
 * The message cache is not implemented and I have no idea what that may entrail. Probably the above.
 * First message from purple-signal to official signal is not sent properly.
-* Windows binary is barely usable.
 * Avatars are downloaded into working directory.
 * It takes two minutes for the internal JVM to shut down. Or it crashes when terminating Pidgin. This issue disappears and reappears erratically.
